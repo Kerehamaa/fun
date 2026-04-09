@@ -1,14 +1,33 @@
 <div id="prince-overlay" aria-hidden="true">
-  <div class="prince-bg-pulse"></div>
-  <div class="gold-drift" id="prince-stars"></div>
+  <div class="prince-void"></div>
+  <div class="prince-nebula nebula-a"></div>
+  <div class="prince-nebula nebula-b"></div>
+
+  <div id="prince-stars" class="prince-stars" aria-hidden="true"></div>
+  <div id="prince-fireflies" class="prince-fireflies" aria-hidden="true"></div>
+  <div id="prince-paws" class="prince-paws" aria-hidden="true"></div>
+
+  <div class="prince-candles" aria-hidden="true">
+    <span class="candle"></span><span class="candle"></span><span class="candle"></span><span class="candle"></span>
+    <span class="candle"></span><span class="candle"></span><span class="candle"></span><span class="candle"></span>
+  </div>
+
   <div class="prince-stage">
-    <div class="crown" aria-hidden="true">👑</div>
-    <svg viewBox="0 0 220 260" class="cat" aria-hidden="true">
-      <path
-        d="M91 46 L104 70 L117 46 L132 72 C149 83 159 106 158 130 C157 162 143 188 124 203 C123 214 129 225 142 229 C162 235 182 229 191 214 C198 202 195 182 178 173 C172 170 169 162 173 156 C177 149 188 147 196 152 C222 168 227 206 209 229 C188 256 140 255 113 236 C95 223 88 210 82 190 C76 171 73 152 71 130 C70 105 78 83 94 71 Z"
-      />
-    </svg>
-    <h3>Prince</h3>
+    <div id="prince-crown" class="prince-crown" aria-hidden="true">👑</div>
+
+    <div id="prince-cat-wrap" class="prince-cat-wrap" aria-hidden="true">
+      <div id="prince-cat-particles" class="prince-cat-particles"></div>
+      <svg id="prince-cat" viewBox="0 0 240 260" class="prince-cat" aria-hidden="true">
+        <path d="M92 218 C91 192 72 175 72 148 C72 125 79 107 93 94 C100 87 97 73 88 60 L78 43 C76 38 82 35 87 40 L100 56 L110 39 C113 34 120 36 120 42 L119 59 L130 41 C134 36 141 39 138 45 L129 63 C121 76 120 87 127 95 C142 110 150 128 150 149 C150 177 133 193 131 217 C131 222 139 226 149 225 C165 223 177 212 183 203 C188 196 200 199 198 208 C196 221 179 236 157 239 C139 242 120 234 113 223 C108 216 101 216 92 218 Z" />
+      </svg>
+    </div>
+
+    <h3 id="prince-name" class="prince-name" aria-label="Prince"></h3>
+    <div id="prince-message" class="prince-message" aria-hidden="true">
+      <p>forever loved. forever remembered.</p>
+      <p>the best cat who ever lived.</p>
+      <p>you're with God now.</p>
+    </div>
   </div>
 </div>
 
@@ -16,133 +35,463 @@
   #prince-overlay {
     position: fixed;
     inset: 0;
-    background: radial-gradient(circle at center, #2a0d47 0%, #0d001a 68%);
+    z-index: 2200;
     display: grid;
     place-items: center;
+    overflow: hidden;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 760ms ease;
-    z-index: 2200;
+    transition: opacity 1200ms ease;
     filter: brightness(0.92);
+    will-change: opacity, filter;
   }
   #prince-overlay.open {
     opacity: 1;
     pointer-events: auto;
-    animation: breathe 6s ease-in-out infinite;
+    animation: prince-breathe 6s ease-in-out infinite;
   }
-  .prince-bg-pulse {
+
+  .prince-void {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, rgba(255, 213, 154, 0.08), transparent 65%);
-    mix-blend-mode: screen;
+    background: #07001a;
   }
+  .prince-nebula {
+    position: absolute;
+    width: 85vmax;
+    height: 85vmax;
+    border-radius: 50%;
+    filter: blur(45px);
+    mix-blend-mode: screen;
+    opacity: 0.2;
+    will-change: transform;
+  }
+  .nebula-a {
+    background: radial-gradient(circle, rgba(118, 84, 194, 0.28) 0%, rgba(20, 8, 60, 0) 68%);
+    top: -20vmax;
+    left: -12vmax;
+    animation: nebula-drift-a 18s ease-in-out infinite alternate;
+  }
+  .nebula-b {
+    background: radial-gradient(circle, rgba(80, 130, 220, 0.2) 0%, rgba(12, 16, 58, 0) 65%);
+    right: -18vmax;
+    bottom: -20vmax;
+    animation: nebula-drift-b 22s ease-in-out infinite alternate;
+  }
+
+  .prince-stars,
+  .prince-fireflies,
+  .prince-paws {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .star-dot {
+    position: absolute;
+    width: var(--size);
+    height: var(--size);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    opacity: 0.25;
+    animation: twinkle var(--dur) ease-in-out infinite;
+    animation-delay: var(--delay);
+    will-change: opacity;
+  }
+
+  .firefly {
+    position: absolute;
+    width: var(--size);
+    height: var(--size);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 213, 154, 0.98) 0%, rgba(255, 170, 70, 0.18) 72%, rgba(255, 170, 70, 0) 100%);
+    box-shadow: 0 0 10px rgba(255, 205, 130, 0.75), 0 0 24px rgba(255, 205, 130, 0.4);
+    animation: firefly-rise var(--dur) linear forwards;
+    will-change: transform, opacity;
+  }
+
   .prince-stage {
+    position: relative;
+    z-index: 3;
+    width: min(88vw, 760px);
+    display: grid;
+    justify-items: center;
+    row-gap: 0.5rem;
+    text-align: center;
+  }
+
+  .prince-cat-wrap {
+    width: min(42vw, 340px);
+    height: 35vh;
+    min-height: 220px;
+    max-height: 380px;
     position: relative;
     display: grid;
     place-items: center;
-    gap: 0.7rem;
-    z-index: 2;
   }
-  .cat {
-    width: min(240px, 50vw);
+
+  .prince-cat-particles {
+    position: absolute;
+    inset: 0;
+  }
+  .cat-dot {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ffd59a;
+    box-shadow: 0 0 8px rgba(255, 213, 154, 0.85);
+    opacity: 0.35;
+    transition: left 1700ms cubic-bezier(0.18, 0.84, 0.22, 1), top 1700ms cubic-bezier(0.18, 0.84, 0.22, 1), opacity 1600ms ease;
+    will-change: left, top, opacity;
+  }
+
+  .prince-cat {
+    width: 100%;
+    height: 100%;
     opacity: 0;
-    transform: translateY(14px) scale(0.97);
-    transition: opacity 980ms ease 0.8s, transform 980ms ease 0.8s;
-    filter: drop-shadow(0 0 14px rgba(255, 213, 154, 0.5));
+    transform: translateY(12px) scale(0.97);
+    transition: opacity 900ms ease, transform 900ms ease;
+    will-change: opacity, transform;
+    filter: drop-shadow(0 0 16px rgba(255, 213, 154, 0.55));
   }
-  .cat path {
+  .prince-cat.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .prince-cat path {
     fill: #ffd59a;
   }
-  h3 {
-    margin: 0;
-    font-family: 'Times New Roman', 'Cormorant Garamond', serif;
-    font-size: clamp(2.2rem, 8vw, 4.2rem);
-    letter-spacing: 0.08em;
-    color: #ffd59a;
-    opacity: 0;
-    transform: translateY(10px);
-    text-shadow: 0 0 10px rgba(255, 213, 154, 0.55), 0 0 26px rgba(255, 213, 154, 0.35);
-    transition: opacity 880ms ease 1.5s, transform 880ms ease 1.5s;
-  }
-  .crown {
+
+  .prince-crown {
     position: absolute;
-    top: -2.8rem;
-    font-size: clamp(1.2rem, 4vw, 2rem);
+    top: 0.2rem;
+    font-size: clamp(1.2rem, 2.6vw, 2.2rem);
     opacity: 0;
     transform: translateY(8px) scale(0.9);
-    transition: opacity 700ms ease 2s, transform 700ms ease 2s;
-    filter: drop-shadow(0 0 8px rgba(255, 213, 154, 0.6));
+    transition: opacity 720ms ease, transform 720ms ease;
+    filter: drop-shadow(0 0 8px rgba(255, 213, 154, 0.65));
+    will-change: opacity, transform;
   }
-  #prince-overlay.open .cat,
-  #prince-overlay.open h3,
-  #prince-overlay.open .crown {
+  .prince-crown.visible {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 
-  .gold-drift {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
+  .prince-name {
+    margin: 0;
+    min-height: 1.3em;
+    font-family: 'Times New Roman', 'Cormorant Garamond', serif;
+    font-size: clamp(2.5rem, 9vw, 5rem);
+    color: #ffd59a;
+    letter-spacing: 0.12em;
+    text-shadow: 0 0 10px rgba(255, 213, 154, 0.6), 0 0 24px rgba(255, 213, 154, 0.28);
   }
-  .gold-star {
-    position: absolute;
-    background: radial-gradient(circle, rgba(255, 230, 173, 0.95), rgba(255, 205, 120, 0));
-    border-radius: 50%;
-    animation: drift linear infinite;
+  .prince-letter {
+    display: inline-block;
     opacity: 0;
+    transform: translateY(10px);
+    animation: letter-rise 480ms ease forwards;
   }
 
-  @keyframes drift {
-    0% { transform: translate3d(0, 15px, 0) scale(0.8); opacity: 0; }
-    20% { opacity: 0.9; }
-    100% { transform: translate3d(var(--driftX), -110vh, 0) scale(1.15); opacity: 0; }
+  .prince-message {
+    margin-top: 0.55rem;
+    display: grid;
+    gap: 0.35rem;
+    font-family: 'Times New Roman', 'Cormorant Garamond', serif;
+    color: #e8c880;
+    font-size: clamp(0.9rem, 2.2vw, 1.4rem);
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 10px rgba(255, 213, 154, 0.18);
   }
-  @keyframes breathe {
+  .prince-message p {
+    margin: 0;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 820ms ease, transform 820ms ease;
+  }
+  .prince-message p.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .paw-print {
+    position: absolute;
+    font-size: clamp(1rem, 1.8vw, 1.55rem);
+    color: rgba(255, 213, 154, 0.62);
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+    animation: paw-fade 2s ease forwards;
+    filter: drop-shadow(0 0 6px rgba(255, 199, 120, 0.3));
+  }
+
+  .prince-candles {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.4rem;
+    height: 22vh;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .candle {
+    position: absolute;
+    bottom: 0;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(255, 178, 84, 0.9);
+    box-shadow: 0 0 12px rgba(255, 175, 72, 0.8), 0 -26px 34px rgba(255, 166, 74, 0.38);
+    animation: candle-sway var(--dur, 4.6s) ease-in-out infinite;
+    will-change: transform;
+  }
+  .candle:nth-child(1) { left: 6%;  --dur: 4.8s; }
+  .candle:nth-child(2) { left: 16%; --dur: 5.4s; }
+  .candle:nth-child(3) { left: 29%; --dur: 4.1s; }
+  .candle:nth-child(4) { left: 40%; --dur: 5.2s; }
+  .candle:nth-child(5) { left: 53%; --dur: 4.3s; }
+  .candle:nth-child(6) { left: 66%; --dur: 5.6s; }
+  .candle:nth-child(7) { left: 79%; --dur: 4.4s; }
+  .candle:nth-child(8) { left: 91%; --dur: 5s; }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.15; }
+    45% { opacity: 0.75; }
+    75% { opacity: 0.32; }
+  }
+  @keyframes firefly-rise {
+    0% { transform: translate3d(0, 0, 0) scale(0.9); opacity: 0; }
+    10% { opacity: 0.9; }
+    100% { transform: translate3d(var(--dx), -90vh, 0) scale(1.08); opacity: 0; }
+  }
+  @keyframes paw-fade {
+    0% { opacity: 0; transform: translateY(8px) scale(0.92); }
+    22% { opacity: 0.7; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-6px) scale(1.03); }
+  }
+  @keyframes letter-rise {
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes prince-breathe {
     0%, 100% { filter: brightness(0.92); }
     50% { filter: brightness(1); }
+  }
+  @keyframes nebula-drift-a {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(3vmax, 2vmax, 0) scale(1.08); }
+  }
+  @keyframes nebula-drift-b {
+    from { transform: translate3d(0, 0, 0) scale(1); }
+    to { transform: translate3d(-4vmax, -2vmax, 0) scale(1.06); }
+  }
+  @keyframes candle-sway {
+    0%, 100% { transform: translateX(0) scale(1); }
+    50% { transform: translateX(6px) scale(1.04); }
   }
 </style>
 
 <script>
   const overlay = document.getElementById('prince-overlay');
   const stars = document.getElementById('prince-stars');
-  let spawnLoop;
+  const fireflies = document.getElementById('prince-fireflies');
+  const paws = document.getElementById('prince-paws');
+  const cat = document.getElementById('prince-cat');
+  const catWrap = document.getElementById('prince-cat-wrap');
+  const catParticles = document.getElementById('prince-cat-particles');
+  const nameEl = document.getElementById('prince-name');
+  const crown = document.getElementById('prince-crown');
+  const messageLines = Array.from(document.querySelectorAll('#prince-message p'));
 
-  function spawnStar() {
+  let fireflyLoop = null;
+  let pawLoop = null;
+  let closeResetTimer = null;
+  const timeouts = [];
+
+  function later(fn, ms) {
+    const id = setTimeout(fn, ms);
+    timeouts.push(id);
+    return id;
+  }
+
+  function clearTimers() {
+    while (timeouts.length) clearTimeout(timeouts.pop());
+  }
+
+  function makeStarfield() {
     if (!stars) return;
-    const s = document.createElement('span');
-    s.className = 'gold-star';
-    const size = Math.random() * 4 + 2;
-    s.style.width = `${size}px`;
-    s.style.height = `${size}px`;
-    s.style.left = `${Math.random() * 100}%`;
-    s.style.top = `${Math.random() * 100 + 10}%`;
-    s.style.setProperty('--driftX', `${(Math.random() - 0.5) * 40}px`);
-    s.style.animationDuration = `${Math.random() * 8 + 10}s`;
-    s.style.animationDelay = `${Math.random() * 0.8}s`;
-    stars.appendChild(s);
-    setTimeout(() => s.remove(), 20000);
+    stars.innerHTML = '';
+    for (let i = 0; i < 100; i += 1) {
+      const dot = document.createElement('span');
+      dot.className = 'star-dot';
+      dot.style.left = `${Math.random() * 100}%`;
+      dot.style.top = `${Math.random() * 100}%`;
+      dot.style.setProperty('--size', `${(Math.random() * 2 + 1).toFixed(2)}px`);
+      dot.style.setProperty('--dur', `${(Math.random() * 3 + 2.4).toFixed(2)}s`);
+      dot.style.setProperty('--delay', `${(Math.random() * 4).toFixed(2)}s`);
+      stars.appendChild(dot);
+    }
+  }
+
+  function spawnFirefly() {
+    if (!fireflies) return;
+    const f = document.createElement('span');
+    f.className = 'firefly';
+    const size = Math.random() * 5 + 3;
+    f.style.setProperty('--size', `${size}px`);
+    f.style.left = `${Math.random() * 100}%`;
+    f.style.bottom = `${Math.random() * 12}%`;
+    f.style.setProperty('--dx', `${(Math.random() - 0.5) * 80}px`);
+    f.style.setProperty('--dur', `${Math.random() * 6 + 8}s`);
+    fireflies.appendChild(f);
+    setTimeout(() => f.remove(), 16000);
+  }
+
+  function startFireflies() {
+    for (let i = 0; i < 40; i += 1) later(spawnFirefly, i * 70);
+    if (!fireflyLoop) fireflyLoop = setInterval(spawnFirefly, 360);
+  }
+
+  function spawnPaw() {
+    if (!paws) return;
+    const p = document.createElement('span');
+    p.className = 'paw-print';
+    p.textContent = '🐾';
+    p.style.left = `${Math.random() * 86 + 7}%`;
+    p.style.top = `${Math.random() * 74 + 10}%`;
+    paws.appendChild(p);
+    setTimeout(() => p.remove(), 2200);
+  }
+
+  function startPaws() {
+    if (!pawLoop) pawLoop = setInterval(spawnPaw, 3000);
+  }
+
+  function animateCatAssembly() {
+    if (!cat || !catWrap || !catParticles) return;
+
+    catParticles.innerHTML = '';
+    cat.classList.remove('visible');
+
+    const path = cat.querySelector('path');
+    if (!path) return;
+
+    const count = 60;
+    const len = path.getTotalLength();
+    const wrapRect = catWrap.getBoundingClientRect();
+
+    for (let i = 0; i < count; i += 1) {
+      const pt = path.getPointAtLength((i / count) * len);
+      const targetX = (pt.x / 240) * 100;
+      const targetY = (pt.y / 260) * 100;
+
+      const dot = document.createElement('span');
+      dot.className = 'cat-dot';
+      dot.style.left = `${Math.random() * 100}%`;
+      dot.style.top = `${Math.random() * 100}%`;
+      dot.style.opacity = '0.25';
+      catParticles.appendChild(dot);
+
+      requestAnimationFrame(() => {
+        dot.style.left = `${targetX}%`;
+        dot.style.top = `${targetY}%`;
+        dot.style.opacity = '1';
+      });
+    }
+
+    later(() => cat.classList.add('visible'), 1300);
+    later(() => {
+      catParticles.style.transition = 'opacity 700ms ease';
+      catParticles.style.opacity = '0';
+    }, 2000);
+  }
+
+  function revealName() {
+    if (!nameEl) return;
+    nameEl.innerHTML = '';
+    const letters = 'Prince'.split('');
+    letters.forEach((ch, i) => {
+      later(() => {
+        const span = document.createElement('span');
+        span.className = 'prince-letter';
+        span.textContent = ch;
+        span.style.animationDelay = `${i * 40}ms`;
+        nameEl.appendChild(span);
+      }, i * 180);
+    });
+
+    later(() => crown?.classList.add('visible'), letters.length * 180 + 260);
+  }
+
+  function revealMessage() {
+    messageLines.forEach((line, i) => {
+      later(() => line.classList.add('visible'), i * 800);
+    });
+  }
+
+  function resetScene() {
+    clearTimers();
+    if (closeResetTimer) {
+      clearTimeout(closeResetTimer);
+      closeResetTimer = null;
+    }
+
+    if (fireflyLoop) {
+      clearInterval(fireflyLoop);
+      fireflyLoop = null;
+    }
+    if (pawLoop) {
+      clearInterval(pawLoop);
+      pawLoop = null;
+    }
+
+    fireflies && (fireflies.innerHTML = '');
+    paws && (paws.innerHTML = '');
+
+    if (catParticles) {
+      catParticles.innerHTML = '';
+      catParticles.style.opacity = '1';
+      catParticles.style.transition = '';
+    }
+
+    cat?.classList.remove('visible');
+    crown?.classList.remove('visible');
+
+    if (nameEl) nameEl.innerHTML = '';
+    messageLines.forEach((line) => line.classList.remove('visible'));
   }
 
   function openPrince() {
     if (!overlay) return;
+    resetScene();
+    makeStarfield();
+
     overlay.classList.add('open');
     overlay.setAttribute('aria-hidden', 'false');
-    if (!spawnLoop) {
-      for (let i = 0; i < 30; i++) setTimeout(spawnStar, i * 90);
-      spawnLoop = setInterval(spawnStar, 260);
-    }
+
+    later(startFireflies, 1000);
+    later(animateCatAssembly, 3000);
+    later(revealName, 5000);
+    later(revealMessage, 6500);
+    later(startPaws, 6500);
   }
 
   function closePrince() {
-    if (!overlay) return;
+    if (!overlay || !overlay.classList.contains('open')) return;
+
     overlay.classList.remove('open');
     overlay.setAttribute('aria-hidden', 'true');
-    if (spawnLoop) {
-      clearInterval(spawnLoop);
-      spawnLoop = null;
+    clearTimers();
+
+    if (fireflyLoop) {
+      clearInterval(fireflyLoop);
+      fireflyLoop = null;
     }
+    if (pawLoop) {
+      clearInterval(pawLoop);
+      pawLoop = null;
+    }
+
+    closeResetTimer = setTimeout(resetScene, 1200);
   }
 
   document.addEventListener('open-prince-tribute', openPrince);
