@@ -237,28 +237,11 @@
       });
     });
 
-    let history = [];
+  }
+
+  // Snowflake easter egg — works on both desktop and mobile
+  if (section) {
     let snowCooldown = false;
-    section.addEventListener('mousemove', (e) => {
-      const now = performance.now();
-      const centerX = section.clientWidth / 2;
-      const centerY = section.clientHeight / 2;
-      const angle = Math.atan2(
-        e.clientY - section.getBoundingClientRect().top - centerY,
-        e.clientX - section.getBoundingClientRect().left - centerX
-      );
-      history.push({ t: now, a: angle });
-      history = history.filter((h) => now - h.t < 2000);
-      if (history.length < 20 || snowCooldown) return;
-      let changes = 0;
-      for (let i = 1; i < history.length; i++) {
-        let delta = history[i].a - history[i - 1].a;
-        if (delta > Math.PI) delta -= Math.PI * 2;
-        if (delta < -Math.PI) delta += Math.PI * 2;
-        if (Math.abs(delta) > 0.25) changes++;
-      }
-      if (changes > 16) triggerSnowflakes();
-    });
 
     function triggerSnowflakes() {
       snowCooldown = true;
@@ -286,5 +269,42 @@
         setTimeout(() => flake.remove(), 5000);
       }, 110);
     }
+
+    // Desktop: fast cursor circles
+    if (!isTouchEye) {
+      let history = [];
+      section.addEventListener('mousemove', (e) => {
+        const now = performance.now();
+        const centerX = section.clientWidth / 2;
+        const centerY = section.clientHeight / 2;
+        const angle = Math.atan2(
+          e.clientY - section.getBoundingClientRect().top - centerY,
+          e.clientX - section.getBoundingClientRect().left - centerX
+        );
+        history.push({ t: now, a: angle });
+        history = history.filter((h) => now - h.t < 2000);
+        if (history.length < 20 || snowCooldown) return;
+        let changes = 0;
+        for (let i = 1; i < history.length; i++) {
+          let delta = history[i].a - history[i - 1].a;
+          if (delta > Math.PI) delta -= Math.PI * 2;
+          if (delta < -Math.PI) delta += Math.PI * 2;
+          if (Math.abs(delta) > 0.25) changes++;
+        }
+        if (changes > 16) triggerSnowflakes();
+      });
+    }
+
+    // Mobile: tap 5 times rapidly on the eye section
+    let tapTimes = [];
+    section.addEventListener('pointerdown', () => {
+      const now = performance.now();
+      tapTimes.push(now);
+      tapTimes = tapTimes.filter((t) => now - t < 2000);
+      if (tapTimes.length >= 5 && !snowCooldown) {
+        tapTimes = [];
+        triggerSnowflakes();
+      }
+    });
   }
 </script>
