@@ -1,0 +1,32 @@
+<footer class="play-section site-footer" id="footer">
+  <p>made with 🫏 by donkey + kerehama</p>
+  <p class="links">
+    <a href="https://kerehama.nz" target="_blank" rel="noreferrer">kerehama.nz</a>
+    <a href="https://portfolio.kerehama.nz" target="_blank" rel="noreferrer">portfolio.kerehama.nz</a>
+  </p>
+  <p>© 2026</p>
+  <slot />
+</footer>
+
+<style>
+  .site-footer {
+    min-height: 40vh;
+    background: #0a0a0a;
+    color: #b9b9b9;
+    text-align: center;
+    gap: 0.4rem;
+    padding-bottom: 5rem;
+  }
+  .site-footer p { margin: 0.2rem 0; }
+  .site-footer .links {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .site-footer a {
+    color: #ddd;
+    text-decoration: none;
+    border-bottom: 1px dotted #555;
+  }
+</style>

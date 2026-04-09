@@ -1,0 +1,218 @@
+<section class="play-section hero" id="hero">
+  <canvas id="three-bg" aria-hidden="true"></canvas>
+  <canvas id="particle-bg" aria-hidden="true"></canvas>
+  <div class="hero-content">
+    <h1 id="name3d">KEREHAMA</h1>
+    <p id="tagline">welcome to the fun zone<span class="cursor">|</span></p>
+  </div>
+</section>
+
+<style>
+  .hero {
+    background: radial-gradient(circle at 50% 35%, rgba(0, 245, 255, 0.12), rgba(10, 10, 10, 1) 60%);
+    color: var(--cyan);
+    overflow: hidden;
+  }
+  #three-bg,
+  #particle-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  #three-bg { opacity: 0.35; }
+  #particle-bg { opacity: 0.65; }
+  .hero-content {
+    position: relative;
+    text-align: center;
+    z-index: 2;
+    perspective: 1000px;
+  }
+  #name3d {
+    margin: 0;
+    font-size: clamp(3rem, 14vw, 11rem);
+    line-height: 0.95;
+    text-shadow: 0 0 20px rgba(0, 245, 255, 0.4);
+    transform-style: preserve-3d;
+    transition: transform 120ms linear;
+  }
+  #tagline {
+    margin-top: 1rem;
+    min-height: 2rem;
+    font-size: clamp(1rem, 2.2vw, 1.5rem);
+    letter-spacing: 0.08em;
+    color: #9ffaff;
+    text-transform: lowercase;
+  }
+  .cursor {
+    display: inline-block;
+    margin-left: 0.15rem;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+
+<script>
+  const hero = document.getElementById('hero');
+  const isTouch = window.matchMedia('(pointer: coarse)').matches;
+  const name3d = document.getElementById('name3d');
+  const taglineEl = document.getElementById('tagline');
+
+  if (!isTouch && hero && name3d) {
+    hero.addEventListener('mousemove', (e) => {
+      const rect = hero.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      name3d.style.transform = `rotateX(${(-y * 18).toFixed(2)}deg) rotateY(${(x * 22).toFixed(2)}deg) translateZ(18px)`;
+    });
+    hero.addEventListener('mouseleave', () => {
+      name3d.style.transform = 'rotateX(0deg) rotateY(0deg)';
+    });
+  }
+
+  const fullText = 'welcome to the fun zone';
+  if (taglineEl) {
+    const cursor = taglineEl.querySelector('.cursor');
+    taglineEl.firstChild.textContent = '';
+    let idx = 0;
+    const typer = setInterval(() => {
+      taglineEl.firstChild.textContent += fullText[idx++] || '';
+      if (idx >= fullText.length) clearInterval(typer);
+    }, 65);
+    if (!cursor) taglineEl.innerHTML += '<span class="cursor">|</span>';
+  }
+
+  const threeCanvas = document.getElementById('three-bg');
+  const particleCanvas = document.getElementById('particle-bg');
+
+  if (hero && threeCanvas && particleCanvas) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          startThree();
+          startParticles();
+        } else {
+          stopThree();
+          stopParticles();
+        }
+      });
+    }, { threshold: 0.15 });
+    io.observe(hero);
+  }
+
+  let threeState = null;
+  function startThree() {
+    if (threeState || !window.THREE || !threeCanvas) return;
+    const scene = new window.THREE.Scene();
+    const camera = new window.THREE.PerspectiveCamera(70, hero.clientWidth / hero.clientHeight, 0.1, 1000);
+    const renderer = new window.THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(hero.clientWidth, hero.clientHeight);
+    camera.position.z = 35;
+
+    const geometry = new window.THREE.TorusKnotGeometry(8, 1.8, 120, 16);
+    const material = new window.THREE.MeshBasicMaterial({ color: 0x00f5ff, wireframe: true });
+    const knot = new window.THREE.Mesh(geometry, material);
+    scene.add(knot);
+
+    let raf;
+    const animate = () => {
+      knot.rotation.x += 0.003;
+      knot.rotation.y += 0.005;
+      renderer.render(scene, camera);
+      raf = requestAnimationFrame(animate);
+    };
+
+    const onResize = () => {
+      camera.aspect = hero.clientWidth / hero.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(hero.clientWidth, hero.clientHeight);
+    };
+    window.addEventListener('resize', onResize);
+    animate();
+
+    threeState = { raf, renderer, onResize };
+  }
+
+  function stopThree() {
+    if (!threeState) return;
+    cancelAnimationFrame(threeState.raf);
+    window.removeEventListener('resize', threeState.onResize);
+    threeState.renderer.dispose();
+    threeState = null;
+  }
+
+  let particleState = null;
+  function startParticles() {
+    if (particleState || !particleCanvas) return;
+    const ctx = particleCanvas.getContext('2d');
+    const particles = [];
+    const count = 200;
+    const mouse = { x: -9999, y: -9999 };
+
+    const resize = () => {
+      particleCanvas.width = hero.clientWidth;
+      particleCanvas.height = hero.clientHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * particleCanvas.width,
+        y: Math.random() * particleCanvas.height,
+        ox: 0,
+        oy: 0,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        size: Math.random() * 2 + 0.7,
+      });
+      particles[i].ox = particles[i].x;
+      particles[i].oy = particles[i].y;
+    }
+
+    const onMove = (e) => {
+      const r = hero.getBoundingClientRect();
+      mouse.x = e.clientX - r.left;
+      mouse.y = e.clientY - r.top;
+    };
+    hero.addEventListener('mousemove', onMove);
+    hero.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+
+    let raf;
+    const loop = () => {
+      ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+      for (const p of particles) {
+        const dx = p.x - mouse.x;
+        const dy = p.y - mouse.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < 90) {
+          const force = (90 - dist) / 90;
+          p.vx += (dx / (dist + 0.01)) * force * 1.1;
+          p.vy += (dy / (dist + 0.01)) * force * 1.1;
+        }
+        p.vx += (p.ox - p.x) * 0.0009;
+        p.vy += (p.oy - p.y) * 0.0009;
+        p.vx *= 0.97;
+        p.vy *= 0.97;
+        p.x += p.vx;
+        p.y += p.vy;
+        ctx.fillStyle = 'rgba(0,245,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    loop();
+    particleState = { raf, resize, onMove };
+  }
+
+  function stopParticles() {
+    if (!particleState || !hero) return;
+    cancelAnimationFrame(particleState.raf);
+    window.removeEventListener('resize', particleState.resize);
+    hero.removeEventListener('mousemove', particleState.onMove);
+    particleState = null;
+  }
+</script>

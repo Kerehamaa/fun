@@ -1,0 +1,82 @@
+<button id="prince-paw" aria-label="Prince tribute">🐾</button>
+<div id="prince-overlay" aria-hidden="true">
+  <div class="stars" id="stars"></div>
+  <svg viewBox="0 0 200 220" class="cat" aria-hidden="true">
+    <path d="M50 190 C48 140, 60 100, 95 84 C112 75,125 58,130 40 L144 62 C160 76,167 98,166 130 C165 165,150 190,120 194 C95 197,75 198,50 190Z M78 132 C84 128,90 128,96 132 M112 132 C118 128,124 128,130 132 M95 145 Q105 152 115 145" fill="none" stroke="#ffd59a" stroke-width="5" stroke-linecap="round"/>
+  </svg>
+  <h3>Prince 👑</h3>
+</div>
+
+<style>
+  #prince-paw {
+    position: absolute;
+    bottom: 1.4rem;
+    right: 1.2rem;
+    background: transparent;
+    color: #1a1a1a;
+    border: none;
+    font-size: 1.1rem;
+    opacity: 0.6;
+    z-index: 10;
+  }
+  #prince-overlay {
+    position: fixed;
+    inset: 0;
+    background: #1a0030;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 1rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 600ms ease;
+    z-index: 2000;
+  }
+  #prince-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #prince-overlay .cat { width: min(260px, 50vw); opacity: 0; transform: translateY(10px); transition: all 900ms ease; }
+  #prince-overlay h3 {
+    margin: 0;
+    color: #ffd700;
+    font-size: clamp(2rem, 8vw, 4rem);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    opacity: 0;
+    transition: opacity 1200ms ease 250ms;
+  }
+  #prince-overlay.open .cat { opacity: 1; transform: translateY(0); }
+  #prince-overlay.open h3 { opacity: 1; }
+  .stars {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  .star {
+    position: absolute;
+    color: rgba(255, 215, 0, 0.9);
+    animation: twinkle 2s infinite ease-in-out;
+  }
+  @keyframes twinkle { 50% { opacity: 0.2; transform: scale(0.7); } }
+</style>
+
+<script>
+  const paw = document.getElementById('prince-paw');
+  const overlay = document.getElementById('prince-overlay');
+  const stars = document.getElementById('stars');
+  if (stars) {
+    for (let i = 0; i < 24; i++) {
+      const s = document.createElement('span');
+      s.className = 'star';
+      s.textContent = '✦';
+      s.style.left = `${Math.random() * 100}%`;
+      s.style.top = `${Math.random() * 100}%`;
+      s.style.fontSize = `${Math.random() * 10 + 10}px`;
+      s.style.animationDelay = `${Math.random() * 2}s`;
+      stars.appendChild(s);
+    }
+  }
+  paw?.addEventListener('click', () => overlay?.classList.add('open'));
+  overlay?.addEventListener('click', () => overlay.classList.remove('open'));
+</script>

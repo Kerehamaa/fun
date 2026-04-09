@@ -1,0 +1,189 @@
+<section class="play-section eyes" id="eyes">
+  <h2 class="section-title glitch" data-text="they're watching">they're watching</h2>
+  <div class="eyes-glow"></div>
+  <div class="eye-grid" id="eye-grid"></div>
+  <div id="snowflake-message">snowflake ❄️</div>
+  <div id="snowflakes" aria-hidden="true"></div>
+</section>
+
+<style>
+  .eyes {
+    background: radial-gradient(circle at center, rgba(0, 255, 65, 0.1), #0a0a0a 65%);
+    color: var(--green);
+    overflow: hidden;
+  }
+  .eyes-glow {
+    position: absolute;
+    width: min(70vw, 800px);
+    height: 40vh;
+    background: radial-gradient(circle, rgba(0, 255, 65, 0.16), transparent 70%);
+    filter: blur(20px);
+    pointer-events: none;
+  }
+  .glitch {
+    position: relative;
+    font-size: clamp(2rem, 7vw, 4rem);
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.45);
+  }
+  .glitch::before, .glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+  }
+  .glitch::before {
+    left: 2px;
+    text-shadow: -2px 0 #00ff95;
+    clip-path: polygon(0 30%, 100% 30%, 100% 56%, 0 56%);
+    animation: glitchA 2.5s infinite steps(2, end);
+  }
+  .glitch::after {
+    left: -2px;
+    text-shadow: 2px 0 #4dff4d;
+    clip-path: polygon(0 62%, 100% 62%, 100% 82%, 0 82%);
+    animation: glitchB 2.2s infinite steps(2, end);
+  }
+  @keyframes glitchA { 0%,100%{transform:translate(0)} 25%{transform:translate(-2px,2px)} 50%{transform:translate(2px,-1px)} }
+  @keyframes glitchB { 0%,100%{transform:translate(0)} 35%{transform:translate(2px,0)} 70%{transform:translate(-2px,1px)} }
+
+  .eye-grid {
+    width: min(1000px, 100%);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 0.9rem;
+    position: relative;
+    z-index: 2;
+  }
+  .eye {
+    aspect-ratio: 1.5;
+    border-radius: 100vmax;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 14px rgba(0, 255, 65, 0.25);
+  }
+  .iris {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 45%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #1b5e20;
+    transform: translate(-50%, -50%);
+    transition: transform 30ms linear;
+    display: grid;
+    place-items: center;
+  }
+  .pupil {
+    width: 38%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #000;
+  }
+  #snowflakes {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .flake {
+    position: absolute;
+    top: -2rem;
+    color: #fff;
+    opacity: 0.9;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) translateX(var(--drift)); opacity: 0; }
+  }
+  #snowflake-message {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(0, 255, 65, 0.5);
+    color: #fff;
+    padding: 0.5rem 0.8rem;
+    border-radius: 999px;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 240ms ease;
+  }
+  #snowflake-message.show { opacity: 1; transform: translateY(0); }
+</style>
+
+<script>
+  const grid = document.getElementById('eye-grid');
+  const section = document.getElementById('eyes');
+  const isTouchEye = window.matchMedia('(pointer: coarse)').matches;
+  if (grid && section) {
+    for (let i = 0; i < 80; i++) {
+      const eye = document.createElement('div');
+      eye.className = 'eye';
+      eye.style.transform = `scale(${(Math.random() * 0.55 + 0.75).toFixed(2)})`;
+      eye.innerHTML = '<div class="iris"><div class="pupil"></div></div>';
+      grid.appendChild(eye);
+    }
+  }
+
+  if (!isTouchEye && section) {
+    const irises = [...section.querySelectorAll('.iris')];
+    section.addEventListener('mousemove', (e) => {
+      irises.forEach((iris) => {
+        const rect = iris.parentElement.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+        const dx = e.clientX - cx;
+        const dy = e.clientY - cy;
+        const angle = Math.atan2(dy, dx);
+        const radius = Math.min(rect.width, rect.height) * 0.12;
+        iris.style.transform = `translate(calc(-50% + ${Math.cos(angle) * radius}px), calc(-50% + ${Math.sin(angle) * radius}px))`;
+      });
+    });
+
+    let history = [];
+    let snowCooldown = false;
+    section.addEventListener('mousemove', (e) => {
+      const now = performance.now();
+      const centerX = section.clientWidth / 2;
+      const centerY = section.clientHeight / 2;
+      const angle = Math.atan2(e.clientY - section.getBoundingClientRect().top - centerY, e.clientX - section.getBoundingClientRect().left - centerX);
+      history.push({ t: now, a: angle });
+      history = history.filter((h) => now - h.t < 2000);
+      if (history.length < 20 || snowCooldown) return;
+      let changes = 0;
+      for (let i = 1; i < history.length; i++) {
+        let delta = history[i].a - history[i - 1].a;
+        if (delta > Math.PI) delta -= Math.PI * 2;
+        if (delta < -Math.PI) delta += Math.PI * 2;
+        if (Math.abs(delta) > 0.25) changes++;
+      }
+      if (changes > 16) triggerSnowflakes();
+    });
+
+    function triggerSnowflakes() {
+      snowCooldown = true;
+      const holder = document.getElementById('snowflakes');
+      const msg = document.getElementById('snowflake-message');
+      msg?.classList.add('show');
+      setTimeout(() => msg?.classList.remove('show'), 1800);
+      const end = performance.now() + 5000;
+      const interval = setInterval(() => {
+        if (performance.now() > end) {
+          clearInterval(interval);
+          setTimeout(() => (snowCooldown = false), 2500);
+          return;
+        }
+        const flake = document.createElement('span');
+        flake.className = 'flake';
+        flake.textContent = '❄️';
+        flake.style.left = `${Math.random() * 100}%`;
+        flake.style.fontSize = `${Math.random() * 14 + 10}px`;
+        flake.style.setProperty('--drift', `${(Math.random() - 0.5) * 60}px`);
+        flake.style.animationDuration = `${Math.random() * 2 + 2.5}s`;
+        holder?.appendChild(flake);
+        setTimeout(() => flake.remove(), 5000);
+      }, 110);
+    }
+  }
+</script>

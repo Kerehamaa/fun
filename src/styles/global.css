@@ -1,0 +1,67 @@
+:root {
+  --bg: #0a0a0a;
+  --text: #f8f8f8;
+  --cyan: #00f5ff;
+  --green: #00ff41;
+  --orange: #ff8c00;
+  --violet: #8b5cf6;
+  --sonic: #0051a8;
+  --gold: #ffd700;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  scroll-behavior: smooth;
+}
+
+main {
+  position: relative;
+  overflow-x: hidden;
+}
+
+.play-section {
+  position: relative;
+  min-height: 100svh;
+  padding: clamp(4rem, 8vw, 6rem) clamp(1rem, 3vw, 3rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(40px) scale(0.98);
+  transition: opacity 700ms ease, transform 700ms ease;
+}
+
+.play-section.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.section-title {
+  margin: 0 0 2rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  text-align: center;
+}
+
+button {
+  font: inherit;
+  border: none;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .play-section {
+    min-height: auto;
+    padding: 4.5rem 1rem;
+  }
+}

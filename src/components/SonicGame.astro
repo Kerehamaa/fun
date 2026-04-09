@@ -1,0 +1,205 @@
+<section class="play-section sonic" id="arcade">
+  <h2 class="section-title arcade-title">KEREHAMA'S ARCADE</h2>
+  <div class="game-wrap">
+    <canvas id="sonic-canvas" width="1000" height="420"></canvas>
+    <div id="score">0</div>
+    <div id="game-over" class="hidden">
+      <p id="over-text"></p>
+      <button id="again">play again</button>
+    </div>
+  </div>
+</section>
+
+<style>
+  .sonic {
+    background: radial-gradient(circle at center, rgba(0, 81, 168, 0.22), #0a0a0a 62%);
+    color: #b9d9ff;
+  }
+  .arcade-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(1rem, 3.3vw, 2rem);
+    color: var(--gold);
+    text-shadow: 0 0 14px rgba(255, 215, 0, 0.4);
+    line-height: 1.5;
+  }
+  .game-wrap {
+    position: relative;
+    width: min(1000px, 100%);
+  }
+  #sonic-canvas {
+    width: 100%;
+    border: 2px solid rgba(255, 215, 0, 0.35);
+    border-radius: 1rem;
+    background: linear-gradient(#062f60, #071321 70%);
+    touch-action: manipulation;
+  }
+  #score {
+    position: absolute;
+    right: 0.9rem;
+    top: 0.9rem;
+    font-weight: 700;
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+  }
+  #game-over {
+    position: absolute;
+    inset: 0;
+    background: rgba(5, 5, 14, 0.8);
+    display: grid;
+    place-items: center;
+    text-align: center;
+  }
+  #game-over.hidden { display: none; }
+  #again {
+    background: #ffd700;
+    color: #111;
+    border-radius: 0.5rem;
+    padding: 0.6rem 1rem;
+    font-weight: 700;
+  }
+</style>
+
+<script>
+  const sectionS = document.getElementById('arcade');
+  const canvasS = document.getElementById('sonic-canvas');
+  const ctxS = canvasS?.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const gameOverEl = document.getElementById('game-over');
+  const overText = document.getElementById('over-text');
+  const again = document.getElementById('again');
+
+  let runningS = false;
+  let rafS;
+  let world;
+
+  function resetGame() {
+    world = {
+      sonic: { x: 100, y: 300, vy: 0, onGround: true },
+      obstacles: [],
+      rings: [],
+      score: 0,
+      tick: 0,
+      gameOver: false,
+    };
+    scoreEl.textContent = '0';
+    gameOverEl.classList.add('hidden');
+  }
+
+  function jump() {
+    if (!world || world.gameOver) return;
+    if (world.sonic.onGround) {
+      world.sonic.vy = -11.5;
+      world.sonic.onGround = false;
+    }
+  }
+
+  function spawnObstacle() {
+    world.obstacles.push({ x: 1040, y: 330, w: 26, h: 38 });
+  }
+  function spawnRing() {
+    world.rings.push({ x: 1040, y: 200 + Math.random() * 120, r: 11 });
+  }
+
+  function drawSonic(s) {
+    ctxS.fillStyle = '#1d8cff';
+    ctxS.beginPath();
+    ctxS.arc(s.x, s.y, 20, 0, Math.PI * 2);
+    ctxS.fill();
+    for (let i = 0; i < 6; i++) {
+      const ang = -Math.PI / 2 + i * (Math.PI / 6);
+      ctxS.beginPath();
+      ctxS.moveTo(s.x + Math.cos(ang) * 14, s.y + Math.sin(ang) * 14);
+      ctxS.lineTo(s.x + Math.cos(ang) * 30, s.y + Math.sin(ang) * 30);
+      ctxS.lineWidth = 4;
+      ctxS.strokeStyle = '#1572d6';
+      ctxS.stroke();
+    }
+  }
+
+  function loopS() {
+    if (!runningS || !world || !ctxS) return;
+    const w = canvasS.width;
+    const h = canvasS.height;
+    ctxS.clearRect(0, 0, w, h);
+    ctxS.fillStyle = '#1a3f74';
+    ctxS.fillRect(0, 340, w, h - 340);
+
+    world.tick++;
+    if (world.tick % 80 === 0) spawnObstacle();
+    if (world.tick % 55 === 0) spawnRing();
+
+    world.sonic.vy += 0.55;
+    world.sonic.y += world.sonic.vy;
+    if (world.sonic.y >= 320) {
+      world.sonic.y = 320;
+      world.sonic.vy = 0;
+      world.sonic.onGround = true;
+    }
+
+    world.obstacles.forEach((o) => (o.x -= 5.2));
+    world.rings.forEach((r) => (r.x -= 5.2));
+    world.obstacles = world.obstacles.filter((o) => o.x > -60);
+    world.rings = world.rings.filter((r) => r.x > -30);
+
+    for (const o of world.obstacles) {
+      ctxS.fillStyle = '#ff4d4d';
+      ctxS.fillRect(o.x, o.y, o.w, o.h);
+      if (world.sonic.x + 17 > o.x && world.sonic.x - 17 < o.x + o.w && world.sonic.y + 18 > o.y) {
+        world.gameOver = true;
+      }
+    }
+
+    world.rings = world.rings.filter((r) => {
+      ctxS.strokeStyle = '#ffd700';
+      ctxS.lineWidth = 5;
+      ctxS.beginPath();
+      ctxS.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+      ctxS.stroke();
+      const hit = Math.hypot(world.sonic.x - r.x, world.sonic.y - r.y) < 27;
+      if (hit) {
+        world.score += 10;
+        scoreEl.textContent = String(world.score);
+        return false;
+      }
+      return true;
+    });
+
+    drawSonic(world.sonic);
+
+    if (world.gameOver) {
+      runningS = false;
+      gameOverEl.classList.remove('hidden');
+      overText.textContent = `game over — score ${world.score}`;
+      return;
+    }
+    rafS = requestAnimationFrame(loopS);
+  }
+
+  if (canvasS && sectionS) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && !runningS && !world?.gameOver) {
+          runningS = true;
+          loopS();
+        } else if (!entry.isIntersecting) {
+          runningS = false;
+          cancelAnimationFrame(rafS);
+        }
+      });
+    }, { threshold: 0.25 });
+    io.observe(sectionS);
+
+    const onJump = (e) => { e.preventDefault(); jump(); };
+    window.addEventListener('keydown', (e) => { if (e.code === 'Space') onJump(e); });
+    canvasS.addEventListener('pointerdown', onJump);
+    sectionS.addEventListener('pointerdown', onJump);
+
+    again?.addEventListener('click', () => {
+      resetGame();
+      runningS = true;
+      loopS();
+    });
+
+    resetGame();
+  }
+</script>

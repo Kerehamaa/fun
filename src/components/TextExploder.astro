@@ -1,0 +1,106 @@
+<section class="play-section text-exploder" id="exploder">
+  <h2 class="section-title">break things</h2>
+  <p id="exploder-text"></p>
+</section>
+
+<style>
+  .text-exploder {
+    background: radial-gradient(circle at center, rgba(255, 165, 0, 0.14), #0a0a0a 62%);
+    color: #ffd39a;
+  }
+  #exploder-text {
+    max-width: 900px;
+    font-size: clamp(1.1rem, 2.2vw, 1.8rem);
+    line-height: 1.8;
+    text-align: center;
+  }
+  .word {
+    display: inline-block;
+    margin: 0 0.2em;
+    padding: 0.05em 0.08em;
+    border-radius: 0.2em;
+    cursor: pointer;
+    transition: color 160ms ease, background 180ms ease;
+  }
+  .word:hover { color: #ffa500; background: rgba(255, 140, 0, 0.15); }
+  .letter-frag {
+    position: fixed;
+    pointer-events: none;
+    font-weight: 700;
+    color: #ffa500;
+    text-shadow: 0 0 10px rgba(255, 140, 0, 0.5);
+    will-change: transform, opacity;
+    z-index: 20;
+  }
+</style>
+
+<script>
+  const text = `every word in this sentence wants to be free. hover over us and watch what happens. we dare you. go on. do it. please. we're begging.`;
+  const holder = document.getElementById('exploder-text');
+  const isTouchExploder = window.matchMedia('(pointer: coarse)').matches;
+
+  if (holder) {
+    holder.innerHTML = text
+      .split(' ')
+      .map((word) => `<span class="word">${word}</span>`)
+      .join(' ');
+
+    const words = [...holder.querySelectorAll('.word')];
+    words.forEach((word) => {
+      word.addEventListener('click', () => {
+        const hue = Math.floor(Math.random() * 360);
+        word.style.color = `hsl(${hue}, 100%, 65%)`;
+      });
+      if (!isTouchExploder) word.addEventListener('mouseenter', () => explodeWord(word));
+    });
+  }
+
+  function explodeWord(wordEl) {
+    const rect = wordEl.getBoundingClientRect();
+    const letters = wordEl.textContent.split('');
+    const spanWidth = rect.width / Math.max(letters.length, 1);
+    const fragments = [];
+
+    letters.forEach((ch, i) => {
+      const node = document.createElement('span');
+      node.className = 'letter-frag';
+      node.textContent = ch;
+      const x = rect.left + i * spanWidth;
+      const y = rect.top;
+      node.style.left = `${x}px`;
+      node.style.top = `${y}px`;
+      document.body.appendChild(node);
+      fragments.push({
+        node,
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 6,
+        vy: (Math.random() - 0.9) * 5,
+        opacity: 1,
+      });
+    });
+
+    const gravity = 0.22;
+    const start = performance.now();
+    const duration = 2000;
+
+    function tick() {
+      const now = performance.now();
+      const t = now - start;
+      fragments.forEach((f) => {
+        f.vy += gravity;
+        f.x += f.vx;
+        f.y += f.vy;
+        f.opacity = Math.max(0, 1 - t / duration);
+        f.node.style.transform = `translate(${f.x - parseFloat(f.node.style.left)}px, ${f.y - parseFloat(f.node.style.top)}px)`;
+        f.node.style.opacity = f.opacity;
+      });
+      if (t < duration) {
+        requestAnimationFrame(tick);
+      } else {
+        fragments.forEach((f) => f.node.remove());
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+</script>

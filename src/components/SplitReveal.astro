@@ -1,0 +1,68 @@
+<section id="split-reveal" aria-hidden="true">
+  <div class="curtain left">
+    <span>FUN</span>
+  </div>
+  <div class="curtain right">
+    <span>FUN</span>
+  </div>
+</section>
+
+<style>
+  #split-reveal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    pointer-events: none;
+  }
+  .curtain {
+    position: absolute;
+    top: 0;
+    width: 50%;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .curtain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.15;
+    background-image: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.15) 0 0.8px, transparent 1px),
+      radial-gradient(circle at 60% 70%, rgba(255, 255, 255, 0.12) 0 0.6px, transparent 1px);
+    background-size: 4px 4px, 3px 3px;
+    mix-blend-mode: screen;
+  }
+  .curtain.left {
+    left: 0;
+  }
+  .curtain.right {
+    right: 0;
+  }
+  .curtain span {
+    font-size: clamp(8rem, 30vw, 30rem);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    letter-spacing: 0.06em;
+  }
+</style>
+
+<script>
+  window.addEventListener('load', () => {
+    const reveal = document.getElementById('split-reveal');
+    const left = reveal?.querySelector('.left');
+    const right = reveal?.querySelector('.right');
+    const sections = document.querySelectorAll('.play-section');
+    if (!window.gsap || !reveal || !left || !right) return;
+
+    window.gsap.set(sections, { opacity: 1, y: 0, scale: 1 });
+
+    const tl = window.gsap.timeline({ delay: 1.5 });
+    tl.to(left, { xPercent: -105, duration: 1, ease: 'power3.inOut' })
+      .to(right, { xPercent: 105, duration: 1, ease: 'power3.inOut' }, '<')
+      .to(reveal, { opacity: 0, duration: 0.6, onComplete: () => reveal.remove() });
+  });
+</script>
