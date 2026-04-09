@@ -2,7 +2,9 @@
   <h2 class="section-title arcade-title">KEREHAMA'S ARCADE</h2>
   <div class="game-wrap">
     <canvas id="sonic-canvas" width="640" height="360"></canvas>
-    <div id="score">SCORE 0000</div>
+    <div class="scanlines" aria-hidden="true"></div>
+    <div id="score">SCORE 0000 &nbsp; HI 0000</div>
+    <div id="death-flash" aria-hidden="true"></div>
     <div id="game-over" class="hidden">
       <p id="over-text">GAME OVER</p>
       <button id="again">play again</button>
@@ -25,6 +27,8 @@
   .game-wrap {
     position: relative;
     width: min(960px, 100%);
+    border-radius: 0.9rem;
+    overflow: hidden;
   }
   #sonic-canvas {
     width: 100%;
@@ -35,16 +39,48 @@
     background: #113;
     touch-action: manipulation;
     box-shadow: 0 0 24px rgba(74, 193, 255, 0.2);
+    display: block;
+  }
+  .scanlines {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: 0.9rem;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 1px,
+      rgba(0, 0, 0, 0.06) 1px,
+      rgba(0, 0, 0, 0.06) 2px
+    );
+    mix-blend-mode: multiply;
   }
   #score {
     position: absolute;
     left: 0.9rem;
     top: 0.9rem;
     font-family: 'Press Start 2P', monospace;
-    font-size: clamp(0.7rem, 1.4vw, 1rem);
+    font-size: clamp(0.62rem, 1.3vw, 0.92rem);
     color: #ffd700;
     text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
     letter-spacing: 0.04em;
+    z-index: 3;
+  }
+  #death-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: rgba(255, 30, 30, 0.28);
+    opacity: 0;
+    z-index: 2;
+  }
+  #death-flash.on {
+    animation: deathFlash 240ms ease-out 2;
+  }
+  @keyframes deathFlash {
+    0% { opacity: 0; }
+    35% { opacity: 1; }
+    100% { opacity: 0; }
   }
   #game-over {
     position: absolute;
@@ -57,6 +93,7 @@
     backdrop-filter: blur(2px);
     text-align: center;
     border-radius: 0.9rem;
+    z-index: 4;
   }
   #game-over.hidden {
     display: none;
@@ -93,6 +130,10 @@
   const gameOverEl = document.getElementById('game-over');
   const overText = document.getElementById('over-text');
   const again = document.getElementById('again');
+  const deathFlash = document.getElementById('death-flash');
+
+  const HI_KEY = 'sonic-hi-score';
+  let hiScore = Number.parseInt(localStorage.getItem(HI_KEY) || '0', 10) || 0;
 
   let runningS = false;
   let rafS;
@@ -102,32 +143,155 @@
     width: 640,
     height: 360,
     groundY: 286,
-    speed: 3.2,
+    baseSpeed: 3.2,
+    maxSpeed: 7,
   };
+
+  const PALETTE = {
+    '.': null,
+    O: '#0f3b87',
+    B: '#1870dc',
+    S: '#f3c997',
+    W: '#ffffff',
+    P: '#111111',
+    R: '#d9292f',
+    T: '#ffffff',
+    G: '#ffffff',
+  };
+
+  const SONIC_FRAMES = [
+    [
+      '........................',
+      '...........OOOO.........',
+      '........OOOBBBOOO.......',
+      '......OOBBBBBBBBOO......',
+      '.....OBBBBBBBBBBBBO.....',
+      '....OBBBBBBBBBBBBBBO....',
+      '..OOOBBBBBBBBBOBBBBBO...',
+      '.OOBBBBBBBBBBOOOBBBBBO..',
+      '.OBBBBBBBBBBO...OBBBBBO.',
+      'OOBBBBBBBBBBO...OBBBBBO.',
+      'OBBBBBBWWWBBBO.OOBBBBBO.',
+      'OBBBBBBWPPWBBBOOBBBBBBO.',
+      'OBBBBBBWWWSSSOBBBBBBBBO.',
+      'OBBBBBBSSSSSSSBBBBBBBBO.',
+      '.OBBBBSSSSSSSSSBBBBBBBO.',
+      '.OOBBBSSSSSSSSSSBBBBBO..',
+      '..OOBBSSSSSSSSSSSBBBO...',
+      '....OBBSSSSSSSSSSBBO....',
+      '.....OBBBSSSSSSBBBO.....',
+      '.....OBBBBSSSSBBBB......',
+      '.....OBBBBBBBBBBBBO.....',
+      '....OOBBBGG..GGBBBO.....',
+      '...OOOBBG....GGBBBOO....',
+      '...OBBRRRT..TRRRBBBO....',
+      '..OOBRRRRR..RRRRRBBO....',
+      '..OBRRRRT....TRRRRBO....',
+      '..OBBBBB......BBBBBO....',
+      '...OOBB........BBOO.....',
+      '....OO..........OO......',
+      '........................',
+      '........................',
+      '........................',
+    ],
+    [
+      '........................',
+      '...........OOOO.........',
+      '........OOOBBBOOO.......',
+      '......OOBBBBBBBBOO......',
+      '.....OBBBBBBBBBBBBO.....',
+      '....OBBBBBBBBBBBBBBO....',
+      '..OOOBBBBBBBBBOBBBBBO...',
+      '.OOBBBBBBBBBBOOOBBBBBO..',
+      '.OBBBBBBBBBBO...OBBBBBO.',
+      'OOBBBBBBBBBBO...OBBBBBO.',
+      'OBBBBBBWWWBBBO.OOBBBBBO.',
+      'OBBBBBBWPPWBBBOOBBBBBBO.',
+      'OBBBBBBWWWSSSOBBBBBBBBO.',
+      'OBBBBBBSSSSSSSBBBBBBBBO.',
+      '.OBBBBSSSSSSSSSBBBBBBBO.',
+      '.OOBBBSSSSSSSSSSBBBBBO..',
+      '..OOBBSSSSSSSSSSSBBBO...',
+      '....OBBSSSSSSSSSSBBO....',
+      '.....OBBBSSSSSSBBBO.....',
+      '.....OBBBBSSSSBBBB......',
+      '.....OBBBBBBBBBBBBO.....',
+      '....OOBBGG..GGBBBBO.....',
+      '...OOOBBGR..RGGBBBOO....',
+      '...OBBRRRT..TRRRBBBO....',
+      '..OOBRRRRR..RRRRRBBO....',
+      '..OBTRRRR....RRRTBBO....',
+      '..OBBBBB......BBBBBO....',
+      '...OOBB........BBOO.....',
+      '....OO..........OO......',
+      '........................',
+      '........................',
+      '........................',
+    ],
+  ];
+
+  const SONIC_BALL = [
+    '........................',
+    '........................',
+    '........OOOOOOO.........',
+    '......OOOBBBBBOOO.......',
+    '.....OOBBBBBBBBBOO......',
+    '....OOBBBOOOBBBBBO......',
+    '....OBBBO....OBBBBO.....',
+    '...OBBBO......OBBBBO....',
+    '...OBBO..SSSS..OBBBO....',
+    '..OBBBO.SSWWSS..OBBBO...',
+    '..OBBBO.SWPPWS..OBBBO...',
+    '..OBBBO.SSWWSS..OBBBO...',
+    '..OBBBO..SSSS...OBBBO...',
+    '..OBBBBO......OOBBBBO...',
+    '...OBBBBO....OOBBBBO....',
+    '...OOBBBBBOOOBBBBBO.....',
+    '....OOBBBBBBBBBBBO......',
+    '.....OOBBBBBBBBBO.......',
+    '......OOBBRRBBBO........',
+    '.......OOBRRBBO.........',
+    '........OOBBBO..........',
+    '.........OOOO...........',
+    '........................',
+    '........................',
+    '........................',
+    '........................',
+    '........................',
+    '........................',
+    '........................',
+    '........................',
+    '........................',
+    '........................',
+  ];
 
   function resetGame() {
     world = {
-      sonic: { x: 118, y: GAME.groundY - 34, vy: 0, onGround: true, step: 0 },
+      sonic: { x: 120, y: GAME.groundY - 64, vy: 0, onGround: true, step: 0 },
       obstacles: [],
       rings: [],
-      clouds: Array.from({ length: 7 }, (_, i) => ({
-        x: i * 110 + Math.random() * 40,
-        y: 40 + Math.random() * 85,
+      clouds: Array.from({ length: 8 }, (_, i) => ({
+        x: i * 96 + Math.random() * 40,
+        y: 36 + Math.random() * 86,
         size: 18 + Math.random() * 20,
-        speed: 0.2 + Math.random() * 0.3,
+        speed: 0.16 + Math.random() * 0.22,
       })),
-      hills: Array.from({ length: 4 }, (_, i) => ({
-        x: i * 210,
-        h: 45 + Math.random() * 28,
-        w: 200 + Math.random() * 40,
-      })),
+      mountains: Array.from({ length: 5 }, (_, i) => ({ x: i * 220, h: 70 + Math.random() * 28, w: 220 + Math.random() * 55 })),
+      hills: Array.from({ length: 6 }, (_, i) => ({ x: i * 160, h: 48 + Math.random() * 28, w: 170 + Math.random() * 35 })),
+      palms: Array.from({ length: 9 }, (_, i) => ({ x: i * 185 + Math.random() * 90, h: 26 + Math.random() * 14 })),
       particles: [],
       score: 0,
+      speed: GAME.baseSpeed,
       tick: 0,
       gameOver: false,
     };
-    if (scoreEl) scoreEl.textContent = 'SCORE 0000';
+    updateScore();
     gameOverEl?.classList.add('hidden');
+  }
+
+  function updateScore() {
+    if (!scoreEl || !world) return;
+    scoreEl.textContent = `SCORE ${String(world.score).padStart(4, '0')}  HI ${String(hiScore).padStart(4, '0')}`;
   }
 
   function jump() {
@@ -137,33 +301,31 @@
   }
 
   function spawnObstacle() {
-    const size = 26 + Math.random() * 16;
-    world.obstacles.push({ x: GAME.width + 30, size, height: 24 + Math.random() * 26 });
+    world.obstacles.push({
+      x: GAME.width + 30,
+      size: 34 + Math.random() * 14,
+      bodyY: GAME.groundY - 24,
+      tint: Math.random() > 0.5 ? '#8fa0bf' : '#9db0d2',
+    });
   }
 
   function spawnRing() {
     world.rings.push({
       x: GAME.width + 10,
-      y: 120 + Math.random() * 130,
-      r: 10,
+      y: 122 + Math.random() * 124,
+      r: 13,
       bob: Math.random() * Math.PI,
+      phase: Math.random() * Math.PI * 2,
     });
   }
 
   function spawnRingBurst(x, y) {
-    const count = 10;
-    for (let i = 0; i < count; i++) {
-      const ang = (Math.PI * 2 * i) / count + Math.random() * 0.3;
-      const speed = 1.6 + Math.random() * 2.3;
-      world.particles.push({
-        x,
-        y,
-        vx: Math.cos(ang) * speed,
-        vy: Math.sin(ang) * speed - 0.6,
-        life: 34 + Math.random() * 22,
-        maxLife: 56,
-      });
+    for (let i = 0; i < 8; i++) {
+      const ang = (Math.PI * 2 * i) / 8 + Math.random() * 0.25;
+      const speed = 1.4 + Math.random() * 1.9;
+      world.particles.push({ x, y, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed - 0.6, life: 22 + Math.random() * 12, maxLife: 34, type: 'star' });
     }
+    world.particles.push({ x, y: y - 10, vx: 0, vy: -0.3, life: 18, maxLife: 18, type: 'text', text: '✦' });
   }
 
   function drawSky(tick) {
@@ -173,14 +335,41 @@
     ctxS.fillStyle = grad;
     ctxS.fillRect(0, 0, GAME.width, GAME.groundY);
 
-    world.hills.forEach((h) => {
-      const x = ((h.x - tick * 0.55) % (GAME.width + 220)) - 80;
-      ctxS.fillStyle = 'rgba(29, 116, 176, 0.55)';
+    world.mountains.forEach((m) => {
+      const x = ((m.x - tick * world.speed * 0.3) % (GAME.width + 260)) - 130;
+      ctxS.fillStyle = 'rgba(23, 64, 130, 0.55)';
       ctxS.beginPath();
       ctxS.moveTo(x, GAME.groundY);
-      ctxS.quadraticCurveTo(x + h.w * 0.5, GAME.groundY - h.h, x + h.w, GAME.groundY);
+      ctxS.lineTo(x + m.w * 0.3, GAME.groundY - m.h * 0.62);
+      ctxS.lineTo(x + m.w * 0.6, GAME.groundY - m.h);
+      ctxS.lineTo(x + m.w, GAME.groundY);
       ctxS.closePath();
       ctxS.fill();
+    });
+
+    world.hills.forEach((h) => {
+      const x = ((h.x - tick * world.speed * 0.6) % (GAME.width + 220)) - 80;
+      ctxS.fillStyle = 'rgba(26, 122, 78, 0.48)';
+      ctxS.beginPath();
+      ctxS.moveTo(x, GAME.groundY);
+      ctxS.quadraticCurveTo(x + h.w * 0.4, GAME.groundY - h.h, x + h.w, GAME.groundY);
+      ctxS.closePath();
+      ctxS.fill();
+    });
+
+    world.palms.forEach((p) => {
+      const x = ((p.x - tick * world.speed * 0.6) % (GAME.width + 260)) - 120;
+      const trunkY = GAME.groundY - p.h;
+      ctxS.fillStyle = 'rgba(14, 48, 30, 0.65)';
+      ctxS.fillRect(x, trunkY, 4, p.h);
+      for (let i = -2; i <= 2; i++) {
+        ctxS.beginPath();
+        ctxS.moveTo(x + 2, trunkY + 2);
+        ctxS.lineTo(x + 2 + i * 8, trunkY - 9 - Math.abs(i) * 2);
+        ctxS.lineTo(x + 2 + i * 9, trunkY - 4);
+        ctxS.closePath();
+        ctxS.fill();
+      }
     });
 
     world.clouds.forEach((c) => {
@@ -197,9 +386,11 @@
 
   function drawGround(tick) {
     const tile = 20;
-    for (let y = GAME.groundY; y < GAME.height; y += tile) {
+    ctxS.fillStyle = '#7b4b25';
+    ctxS.fillRect(0, GAME.groundY, GAME.width, 10);
+    for (let y = GAME.groundY + 10; y < GAME.height; y += tile) {
       for (let x = 0; x < GAME.width; x += tile) {
-        const moving = Math.floor((x + tick * GAME.speed) / tile);
+        const moving = Math.floor((x + tick * world.speed) / tile);
         const alt = (moving + Math.floor(y / tile)) % 2 === 0;
         ctxS.fillStyle = alt ? '#2d8a4e' : '#3ea95d';
         ctxS.fillRect(x, y, tile, tile);
@@ -208,126 +399,124 @@
     ctxS.strokeStyle = 'rgba(0,0,0,0.15)';
     for (let x = 0; x < GAME.width; x += tile) {
       ctxS.beginPath();
-      ctxS.moveTo(x, GAME.groundY);
+      ctxS.moveTo(x, GAME.groundY + 10);
       ctxS.lineTo(x, GAME.height);
       ctxS.stroke();
     }
-    ctxS.fillStyle = 'rgba(102, 60, 30, 0.45)';
-    ctxS.fillRect(0, GAME.groundY, GAME.width, 8);
+  }
+
+  function drawSprite(frame, x, y, pixelSize = 2) {
+    for (let row = 0; row < frame.length; row++) {
+      const line = frame[row];
+      for (let col = 0; col < line.length; col++) {
+        const ch = line[col];
+        const color = PALETTE[ch];
+        if (!color) continue;
+        ctxS.fillStyle = color;
+        ctxS.fillRect(x + col * pixelSize, y + row * pixelSize, pixelSize, pixelSize);
+      }
+    }
   }
 
   function drawSonic(s) {
-    const x = Math.round(s.x);
-    const y = Math.round(s.y);
-    const bob = s.onGround ? Math.sin(s.step * 0.5) * 1.2 : 0;
-
-    ctxS.save();
-    ctxS.translate(x, y + bob);
-
-    // back spikes
-    ctxS.fillStyle = '#1870dc';
-    ctxS.beginPath();
-    ctxS.moveTo(-20, -14);
-    ctxS.lineTo(-42, -20);
-    ctxS.lineTo(-26, -5);
-    ctxS.closePath();
-    ctxS.fill();
-
-    ctxS.beginPath();
-    ctxS.moveTo(-22, -2);
-    ctxS.lineTo(-44, 2);
-    ctxS.lineTo(-26, 12);
-    ctxS.closePath();
-    ctxS.fill();
-
-    ctxS.beginPath();
-    ctxS.moveTo(-18, 10);
-    ctxS.lineTo(-37, 22);
-    ctxS.lineTo(-16, 22);
-    ctxS.closePath();
-    ctxS.fill();
-
-    // body
-    ctxS.fillRect(-18, -18, 30, 33);
-    ctxS.fillStyle = '#0f56af';
-    ctxS.fillRect(-18, 8, 30, 7);
-
-    // belly
-    ctxS.fillStyle = '#f3c997';
-    ctxS.beginPath();
-    ctxS.arc(-2, 4, 12, 0, Math.PI * 2);
-    ctxS.fill();
-
-    // eye + muzzle
-    ctxS.fillStyle = '#fff';
-    ctxS.fillRect(2, -15, 11, 9);
-    ctxS.fillStyle = '#111';
-    ctxS.fillRect(9, -13, 3, 4);
-    ctxS.fillStyle = '#f3c997';
-    ctxS.fillRect(6, -6, 10, 9);
-
-    // legs & shoes
-    ctxS.fillStyle = '#1870dc';
-    ctxS.fillRect(-6, 13, 6, 7);
-    ctxS.fillRect(4, 13, 6, 7);
-    ctxS.fillStyle = '#d9292f';
-    ctxS.fillRect(-14, 18, 16, 8);
-    ctxS.fillRect(0, 18, 18, 8);
-    ctxS.fillStyle = '#fff';
-    ctxS.fillRect(-7, 20, 6, 2);
-    ctxS.fillRect(7, 20, 7, 2);
-
-    ctxS.restore();
+    const bob = s.onGround ? Math.sin(s.step * 0.45) * 1 : 0;
+    const runFrame = SONIC_FRAMES[Math.floor((world.tick / 6) % SONIC_FRAMES.length)];
+    const frame = s.onGround ? runFrame : SONIC_BALL;
+    drawSprite(frame, Math.round(s.x - 24), Math.round(s.y + bob), 2);
   }
 
-  function drawSpike(obs) {
-    const baseY = GAME.groundY;
-    const spikeCount = Math.max(2, Math.floor(obs.size / 11));
-    const width = spikeCount * 12;
-    ctxS.fillStyle = '#9fc2da';
-    for (let i = 0; i < spikeCount; i++) {
-      const sx = obs.x + i * 12;
+  function drawBadnik(obs) {
+    const x = obs.x;
+    const y = obs.bodyY;
+    const r = obs.size * 0.42;
+
+    ctxS.fillStyle = '#5e6f8f';
+    for (let i = -2; i <= 2; i++) {
       ctxS.beginPath();
-      ctxS.moveTo(sx, baseY);
-      ctxS.lineTo(sx + 6, baseY - obs.height - (i % 2 ? 6 : 0));
-      ctxS.lineTo(sx + 12, baseY);
+      ctxS.moveTo(x + r + i * 6, y - r + 3);
+      ctxS.lineTo(x + r + i * 6 + 3, y - r - 7);
+      ctxS.lineTo(x + r + i * 6 + 6, y - r + 3);
       ctxS.closePath();
       ctxS.fill();
-      ctxS.strokeStyle = '#e6f6ff';
-      ctxS.stroke();
     }
+
+    ctxS.fillStyle = obs.tint;
+    ctxS.beginPath();
+    ctxS.arc(x + r, y, r, 0, Math.PI * 2);
+    ctxS.fill();
+
+    ctxS.fillStyle = '#364766';
+    ctxS.beginPath();
+    ctxS.arc(x + r, y + r * 0.6, r * 0.65, 0, Math.PI);
+    ctxS.fill();
+
+    ctxS.fillStyle = '#fff';
+    ctxS.fillRect(x + r - 11, y - 8, 8, 7);
+    ctxS.fillRect(x + r + 3, y - 8, 8, 7);
+    ctxS.fillStyle = '#d9292f';
+    ctxS.fillRect(x + r - 9, y - 6, 3, 3);
+    ctxS.fillRect(x + r + 6, y - 6, 3, 3);
+
+    ctxS.strokeStyle = '#1a2234';
+    ctxS.lineWidth = 2;
+    ctxS.beginPath();
+    ctxS.moveTo(x + r - 13, y + 2);
+    ctxS.lineTo(x + r - 4, y - 2);
+    ctxS.moveTo(x + r + 13, y + 2);
+    ctxS.lineTo(x + r + 4, y - 2);
+    ctxS.stroke();
   }
 
   function drawRing(r) {
     const pulse = Math.sin(world.tick * 0.08 + r.bob) * 0.8;
-    ctxS.fillStyle = '#ffd700';
+    const rot = Math.abs(Math.sin(world.tick * 0.14 + r.phase));
+    const ringW = Math.max(0.18, rot);
+
+    ctxS.save();
+    ctxS.translate(r.x, r.y + pulse);
+    ctxS.scale(ringW, 1);
+    ctxS.strokeStyle = '#ffcc21';
+    ctxS.lineWidth = 5;
     ctxS.beginPath();
-    ctxS.arc(r.x, r.y + pulse, r.r, 0, Math.PI * 2);
-    ctxS.fill();
-    ctxS.fillStyle = 'rgba(255, 245, 190, 0.9)';
-    ctxS.beginPath();
-    ctxS.arc(r.x - 3, r.y - 3 + pulse, r.r * 0.35, 0, Math.PI * 2);
-    ctxS.fill();
-    ctxS.strokeStyle = '#ffc400';
+    ctxS.arc(0, 0, r.r, 0, Math.PI * 2);
+    ctxS.stroke();
+
+    ctxS.strokeStyle = 'rgba(255, 250, 200, 0.95)';
     ctxS.lineWidth = 2;
     ctxS.beginPath();
-    ctxS.arc(r.x, r.y + pulse, r.r, 0, Math.PI * 2);
+    ctxS.arc(-1, -1, r.r - 2, -Math.PI * 0.2, Math.PI * 0.55);
     ctxS.stroke();
+    ctxS.restore();
   }
 
   function updateParticles() {
     world.particles = world.particles.filter((p) => p.life > 0);
     world.particles.forEach((p) => {
       p.life -= 1;
-      p.vy += 0.08;
+      p.vy += 0.07;
       p.x += p.vx;
       p.y += p.vy;
       const alpha = Math.max(0, p.life / p.maxLife);
-      ctxS.fillStyle = `rgba(255, 215, 0, ${alpha})`;
-      ctxS.beginPath();
-      ctxS.arc(p.x, p.y, 2.4, 0, Math.PI * 2);
-      ctxS.fill();
+
+      if (p.type === 'text') {
+        ctxS.fillStyle = `rgba(255,255,180,${alpha})`;
+        ctxS.font = "14px 'Press Start 2P', monospace";
+        ctxS.fillText(p.text, p.x, p.y);
+      } else {
+        ctxS.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+        ctxS.beginPath();
+        ctxS.arc(p.x, p.y, 2.2, 0, Math.PI * 2);
+        ctxS.fill();
+      }
     });
+  }
+
+  function handleDeath() {
+    deathFlash?.classList.remove('on');
+    requestAnimationFrame(() => deathFlash?.classList.add('on'));
+    runningS = false;
+    gameOverEl?.classList.remove('hidden');
+    if (overText) overText.textContent = `GAME OVER\nSCORE ${String(world.score).padStart(4, '0')}`;
   }
 
   function loopS() {
@@ -335,6 +524,7 @@
 
     ctxS.clearRect(0, 0, GAME.width, GAME.height);
     world.tick += 1;
+    world.speed = Math.min(GAME.maxSpeed, world.speed + 0.001);
 
     if (world.tick % 96 === 0) spawnObstacle();
     if (world.tick % 70 === 0) spawnRing();
@@ -345,51 +535,65 @@
     world.sonic.step += 1;
     world.sonic.vy += 0.55;
     world.sonic.y += world.sonic.vy;
-    if (world.sonic.y >= GAME.groundY - 34) {
-      world.sonic.y = GAME.groundY - 34;
+    if (world.sonic.y >= GAME.groundY - 64) {
+      world.sonic.y = GAME.groundY - 64;
       world.sonic.vy = 0;
       world.sonic.onGround = true;
     }
 
     world.obstacles.forEach((o) => {
-      o.x -= GAME.speed;
-      drawSpike(o);
+      o.x -= world.speed;
+      drawBadnik(o);
       const sonicHitbox = {
-        x: world.sonic.x - 16,
-        y: world.sonic.y - 18,
-        w: 32,
-        h: 38,
+        x: world.sonic.x - 14,
+        y: world.sonic.y + 4,
+        w: 30,
+        h: 52,
+      };
+      const enemyHitbox = {
+        x: o.x + 3,
+        y: o.bodyY - o.size * 0.4,
+        w: o.size * 0.85,
+        h: o.size * 0.92,
       };
       if (
-        sonicHitbox.x < o.x + o.size &&
-        sonicHitbox.x + sonicHitbox.w > o.x &&
-        sonicHitbox.y + sonicHitbox.h > GAME.groundY - o.height
+        sonicHitbox.x < enemyHitbox.x + enemyHitbox.w &&
+        sonicHitbox.x + sonicHitbox.w > enemyHitbox.x &&
+        sonicHitbox.y < enemyHitbox.y + enemyHitbox.h &&
+        sonicHitbox.y + sonicHitbox.h > enemyHitbox.y
       ) {
         world.gameOver = true;
       }
     });
 
     world.rings = world.rings.filter((r) => {
-      r.x -= GAME.speed;
+      r.x -= world.speed;
       drawRing(r);
-      const hit = Math.hypot(world.sonic.x - r.x, world.sonic.y - r.y) < 26;
+      const hit = Math.hypot(world.sonic.x - r.x, world.sonic.y + 24 - r.y) < 28;
       if (hit) {
         world.score += 10;
+        if (world.score > hiScore) {
+          hiScore = world.score;
+          localStorage.setItem(HI_KEY, String(hiScore));
+        }
         spawnRingBurst(r.x, r.y);
-        if (scoreEl) scoreEl.textContent = `SCORE ${String(world.score).padStart(4, '0')}`;
+        updateScore();
         return false;
       }
-      return r.x > -25;
+      return r.x > -40;
     });
 
     world.obstacles = world.obstacles.filter((o) => o.x > -80);
     drawSonic(world.sonic);
     updateParticles();
+    updateScore();
 
     if (world.gameOver) {
-      runningS = false;
-      gameOverEl?.classList.remove('hidden');
-      if (overText) overText.textContent = `GAME OVER\nSCORE ${String(world.score).padStart(4, '0')}`;
+      if (world.score > hiScore) {
+        hiScore = world.score;
+        localStorage.setItem(HI_KEY, String(hiScore));
+      }
+      handleDeath();
       return;
     }
 

@@ -61,6 +61,8 @@ import Layout from '../layouts/Layout.astro';
     animation: floatHeart var(--dur) linear forwards;
     filter: blur(var(--blur));
     opacity: 0.72;
+    touch-action: manipulation;
+    pointer-events: auto;
   }
   .heart::before,
   .heart::after {
@@ -74,6 +76,10 @@ import Layout from '../layouts/Layout.astro';
   .heart::before { left: -50%; top: 0; }
   .heart::after { left: 0; top: -50%; }
 
+  .heart.popping {
+    animation: popHeart 150ms ease-out forwards !important;
+  }
+
   @keyframes floatHeart {
     0% {
       transform: translateX(0) translateY(0) rotate(45deg);
@@ -84,6 +90,38 @@ import Layout from '../layouts/Layout.astro';
       transform: translateX(var(--sway)) translateY(-120vh) rotate(45deg);
       opacity: 0;
     }
+  }
+  @keyframes popHeart {
+    0% { transform: scale(1) rotate(45deg); opacity: 0.8; }
+    100% { transform: scale(1.5) rotate(45deg); opacity: 0; }
+  }
+
+  .fragment {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ff7db6;
+    box-shadow: 0 0 10px rgba(255, 125, 182, 0.9), 0 0 18px rgba(255, 95, 167, 0.6);
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  .pop-flash {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    box-shadow: 0 0 18px rgba(255, 255, 255, 0.7);
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: popFlash 200ms ease-out forwards;
+    z-index: 5;
+  }
+  @keyframes popFlash {
+    0% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.2); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(4.2); }
   }
 
   .sparkle {
@@ -115,6 +153,7 @@ import Layout from '../layouts/Layout.astro';
   const hearts = document.getElementById('hearts');
   const sparkles = document.getElementById('sparkles');
   const colors = ['#ff7db6', '#ff5fa7', '#ff8f9f', '#f88cbf', '#ffa3c7'];
+  const fragments = [];
 
   function spawnHeart() {
     if (!hearts) return;
@@ -147,7 +186,68 @@ import Layout from '../layouts/Layout.astro';
     setTimeout(() => s.remove(), 2400);
   }
 
+  function spawnPopFlash(x, y) {
+    if (!hearts) return;
+    const flash = document.createElement('span');
+    flash.className = 'pop-flash';
+    flash.style.left = `${x}px`;
+    flash.style.top = `${y}px`;
+    hearts.appendChild(flash);
+    setTimeout(() => flash.remove(), 220);
+  }
+
+  function spawnFragments(x, y, color) {
+    if (!hearts) return;
+    const count = 6 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.45;
+      const speed = 1.5 + Math.random() * 2.1;
+      const el = document.createElement('span');
+      el.className = 'fragment';
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      el.style.background = color;
+      el.style.boxShadow = `0 0 10px ${color}, 0 0 18px ${color}88`;
+      hearts.appendChild(el);
+      fragments.push({ el, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 1.4, life: 26 + Math.random() * 10, maxLife: 36 });
+    }
+  }
+
+  function updateFragments() {
+    for (let i = fragments.length - 1; i >= 0; i--) {
+      const f = fragments[i];
+      f.life -= 1;
+      f.vy += 0.14;
+      f.x += f.vx;
+      f.y += f.vy;
+      const alpha = Math.max(0, f.life / f.maxLife);
+      f.el.style.transform = `translate(${f.x}px, ${f.y}px)`;
+      f.el.style.opacity = alpha.toFixed(2);
+      if (f.life <= 0) {
+        f.el.remove();
+        fragments.splice(i, 1);
+      }
+    }
+    requestAnimationFrame(updateFragments);
+  }
+
+  hearts?.addEventListener('pointerdown', (e) => {
+    const heart = e.target.closest('.heart');
+    if (!heart || heart.classList.contains('popping')) return;
+    const rect = heart.getBoundingClientRect();
+    const parentRect = hearts.getBoundingClientRect();
+    const px = (e.clientX || rect.left + rect.width / 2) - parentRect.left;
+    const py = (e.clientY || rect.top + rect.height / 2) - parentRect.top;
+    const color = heart.style.getPropertyValue('--color') || '#ff7db6';
+
+    heart.classList.add('popping');
+    spawnPopFlash(px, py);
+    spawnFragments(px, py, color);
+    setTimeout(() => heart.remove(), 160);
+  });
+
   for (let i = 0; i < 30; i++) setTimeout(spawnHeart, i * 180);
   setInterval(spawnHeart, 260);
   setInterval(spawnSparkle, 210);
+  updateFragments();
 </script>

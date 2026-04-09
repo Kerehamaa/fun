@@ -74,6 +74,20 @@
     box-shadow: 0 0 14px rgba(0, 255, 65, 0.25);
     transform-origin: center;
     transition: transform 80ms linear;
+    cursor: pointer;
+  }
+  @keyframes blink {
+    0% { transform: scaleY(1); }
+    30% { transform: scaleY(0.08); }
+    100% { transform: scaleY(1); }
+  }
+  @keyframes blinkAnim {
+    0% { transform: scaleY(1); }
+    30% { transform: scaleY(0.08); }
+    100% { transform: scaleY(1); }
+  }
+  .eye.blinking {
+    animation: blinkAnim 280ms ease-in-out;
   }
   .vein {
     position: absolute;
@@ -142,7 +156,9 @@
     for (let i = 0; i < 80; i++) {
       const eye = document.createElement('div');
       eye.className = 'eye';
-      eye.style.transform = `scale(${(Math.random() * 0.55 + 0.75).toFixed(2)})`;
+      const baseScale = (Math.random() * 0.55 + 0.75).toFixed(2);
+      eye.dataset.baseScale = baseScale;
+      eye.style.transform = `scale(${baseScale}) scaleY(1)`;
       eye.innerHTML = '<div class="iris"><div class="pupil"></div></div>';
       if (Math.random() < 0.2) {
         const lines = Math.floor(Math.random() * 3) + 1;
@@ -167,7 +183,7 @@
     section.addEventListener('mousemove', (e) => {
       irises.forEach((iris, idx) => {
         const eye = eyes[idx];
-        const rect = iris.parentElement.getBoundingClientRect();
+        const rect = eye.getBoundingClientRect();
         const cx = rect.left + rect.width / 2;
         const cy = rect.top + rect.height / 2;
         const dx = e.clientX - cx;
@@ -178,8 +194,46 @@
 
         iris.style.transform = `translate(calc(-50% + ${Math.cos(angle) * radius}px), calc(-50% + ${Math.sin(angle) * radius}px))`;
 
-        const openness = Math.max(0.78, Math.min(1.2, 1.18 - dist / 900));
-        eye.style.transform = `scaleX(1) scaleY(${openness.toFixed(2)})`;
+        if (!eye.classList.contains('blinking')) {
+          const openness = Math.max(0.78, Math.min(1.2, 1.18 - dist / 900));
+          const base = Number.parseFloat(eye.dataset.baseScale || '1');
+          eye.style.transform = `scale(${base}) scaleY(${openness.toFixed(2)})`;
+        }
+      });
+    });
+
+    function startBlink(eye, delay = 0) {
+      setTimeout(() => {
+        eye.classList.remove('blinking');
+        const base = Number.parseFloat(eye.dataset.baseScale || '1');
+        eye.style.transform = `scale(${base}) scaleY(1)`;
+        requestAnimationFrame(() => eye.classList.add('blinking'));
+      }, delay);
+    }
+
+    eyes.forEach((eye) => {
+      eye.addEventListener('animationend', () => {
+        if (!eye.classList.contains('blinking')) return;
+        eye.classList.remove('blinking');
+        const base = Number.parseFloat(eye.dataset.baseScale || '1');
+        eye.style.transform = `scale(${base}) scaleY(1)`;
+      });
+    });
+
+    grid?.addEventListener('pointerdown', (e) => {
+      const clicked = e.target.closest('.eye');
+      if (!clicked) return;
+      const srcRect = clicked.getBoundingClientRect();
+      const sx = srcRect.left + srcRect.width / 2;
+      const sy = srcRect.top + srcRect.height / 2;
+
+      eyes.forEach((eye) => {
+        const r = eye.getBoundingClientRect();
+        const ex = r.left + r.width / 2;
+        const ey = r.top + r.height / 2;
+        const dist = Math.hypot(ex - sx, ey - sy);
+        const units = dist / 80;
+        startBlink(eye, units * 50);
       });
     });
 
