@@ -1,10 +1,10 @@
 <footer class="play-section site-footer" id="footer">
-  <p>made with 🫏 by donkey + kerehama</p>
   <p class="links">
     <a href="https://kerehama.nz" target="_blank" rel="noreferrer">kerehama.nz</a>
     <a href="https://portfolio.kerehama.nz" target="_blank" rel="noreferrer">portfolio.kerehama.nz</a>
   </p>
   <p>© 2026</p>
+  <button id="prince-paw" aria-label="Prince tribute">🐾</button>
   <slot />
 </footer>
 
@@ -29,4 +29,24 @@
     text-decoration: none;
     border-bottom: 1px dotted #555;
   }
+  #prince-paw {
+    position: absolute;
+    right: 0.65rem;
+    bottom: 0.45rem;
+    background: transparent;
+    border: none;
+    color: #151515;
+    font-size: 0.78rem;
+    opacity: 0.95;
+    cursor: pointer;
+    z-index: 4;
+    padding: 0.15rem;
+    line-height: 1;
+  }
 </style>
+
+<script>
+  document.getElementById('prince-paw')?.addEventListener('click', () => {
+    document.dispatchEvent(new Event('open-prince-tribute'));
+  });
+</script>

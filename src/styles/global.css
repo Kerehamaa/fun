@@ -39,12 +39,32 @@ main {
   opacity: 0;
   transform: translateY(40px) scale(0.98);
   transition: opacity 700ms ease, transform 700ms ease;
+  isolation: isolate;
 }
 
 .play-section.is-visible {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
+
+.play-section::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: clamp(70px, 12vh, 150px);
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(to bottom, rgba(10, 10, 10, 0), var(--next-blend, rgba(10, 10, 10, 0.65)));
+}
+
+#hero { --next-blend: rgba(0, 255, 65, 0.2); }
+#eyes { --next-blend: rgba(255, 140, 0, 0.2); }
+#exploder { --next-blend: rgba(168, 85, 247, 0.22); }
+#gravity { --next-blend: rgba(74, 193, 255, 0.2); }
+#arcade { --next-blend: rgba(10, 10, 10, 0.8); }
+#footer::after { display: none; }
 
 .section-title {
   margin: 0 0 2rem;
@@ -57,6 +77,27 @@ button {
   font: inherit;
   border: none;
   cursor: pointer;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #5a5a5a #101010;
+}
+
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-track {
+  background: #101010;
+}
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #5f5f5f, #343434);
+  border-radius: 999px;
+  border: 2px solid #101010;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #7b7b7b, #3f3f3f);
 }
 
 @media (max-width: 768px) {

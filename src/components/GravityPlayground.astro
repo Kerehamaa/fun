@@ -3,22 +3,23 @@
   <canvas id="gravity-canvas" width="1200" height="600"></canvas>
   <div class="gravity-controls">
     <button id="shake-btn">shake</button>
-    <button id="flip-btn">flip gravity</button>
+    <button id="flip-btn"><span class="flip-label">flip gravity</span></button>
   </div>
-  <div id="dog-easter">teddy &amp; bear 🐾</div>
+  <div id="dog-easter" aria-hidden="true"></div>
 </section>
 
 <style>
   .gravity {
-    background: radial-gradient(circle at 50% 30%, rgba(168, 85, 247, 0.13), #0a0a0a 62%);
+    background: radial-gradient(circle at 50% 28%, rgba(168, 85, 247, 0.16), #0a0a0a 66%);
     color: #cfb4ff;
   }
   #gravity-canvas {
     width: min(1100px, 100%);
-    border: 1px solid rgba(168, 85, 247, 0.4);
+    border: 1px solid rgba(173, 132, 255, 0.5);
     border-radius: 1rem;
-    background: linear-gradient(to bottom, rgba(139, 92, 246, 0.07), rgba(10, 10, 10, 0.35));
+    background: linear-gradient(to bottom, rgba(52, 24, 88, 0.34), rgba(10, 10, 10, 0.55));
     touch-action: none;
+    box-shadow: 0 0 26px rgba(161, 118, 255, 0.2);
   }
   .gravity-controls {
     margin-top: 1rem;
@@ -28,20 +29,46 @@
     justify-content: center;
   }
   .gravity-controls button {
-    padding: 0.7rem 1.1rem;
+    padding: 0.72rem 1.2rem;
     border-radius: 0.6rem;
-    background: #8b5cf6;
+    background: linear-gradient(160deg, #a855f7, #6d46f5);
     color: #fff;
     font-weight: 700;
+    letter-spacing: 0.04em;
+    box-shadow: 0 6px 18px rgba(108, 72, 194, 0.35);
+    transition: transform 250ms ease, box-shadow 250ms ease;
+  }
+  .gravity-controls button:active {
+    transform: translateY(1px);
+  }
+  #shake-btn.pulse {
+    animation: shakePulse 340ms ease;
+  }
+  @keyframes shakePulse {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.08); box-shadow: 0 0 20px rgba(250, 163, 255, 0.7); }
+    100% { transform: scale(1); }
+  }
+  .flip-label {
+    display: inline-block;
+    transition: transform 420ms ease;
+  }
+  #flip-btn.flipped .flip-label {
+    transform: rotate(180deg);
   }
   #dog-easter {
     margin-top: 0.8rem;
+    min-height: 1.2rem;
     opacity: 0;
-    transition: opacity 400ms ease;
-    color: #f3ddff;
-    text-shadow: 0 0 8px rgba(168, 85, 247, 0.6);
+    color: #ffd8a8;
+    text-shadow: 0 0 8px rgba(255, 199, 129, 0.65), 0 0 20px rgba(255, 180, 120, 0.35);
+    transition: opacity 500ms ease;
+    font-weight: 600;
+    letter-spacing: 0.08em;
   }
-  #dog-easter.show { opacity: 1; }
+  #dog-easter.show {
+    opacity: 1;
+  }
 </style>
 
 <script>
@@ -51,70 +78,197 @@
   const shakeBtn = document.getElementById('shake-btn');
   const flipBtn = document.getElementById('flip-btn');
   const easter = document.getElementById('dog-easter');
-  const colors = ['#8b5cf6', '#a855f7', '#22d3ee', '#f472b6', '#facc15', '#34d399'];
+  const neonPalette = ['#7ef3ff', '#b38cff', '#ff9ed8', '#f4ff9c', '#ffc089', '#92ffd0', '#ffd3f6'];
 
   let shapes = [];
+  let flashes = [];
   let gravity = 0.26;
   let running = false;
   let dogDrop = false;
+  let dogs = [];
   let animId;
   let dragId = null;
 
-  const resizeCanvas = () => {
-    if (!canvas || !sectionG) return;
-    const rect = sectionG.querySelector('#gravity-canvas').getBoundingClientRect();
-    canvas.width = rect.width * Math.min(window.devicePixelRatio, 2);
-    canvas.height = 600 * Math.min(window.devicePixelRatio, 2);
-    if (ctx) ctx.scale(Math.min(window.devicePixelRatio, 2), Math.min(window.devicePixelRatio, 2));
-  };
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const view = { w: 1100, h: 600 };
 
-  function spawn(x = Math.random() * 900 + 80, y = Math.random() * 180 + 10) {
+  function resizeCanvas() {
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    view.w = rect.width;
+    view.h = 600;
+    canvas.width = rect.width * dpr;
+    canvas.height = 600 * dpr;
+    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function spawn(x = Math.random() * (view.w - 140) + 70, y = Math.random() * 180 + 20) {
     const types = ['circle', 'square', 'triangle'];
     const type = types[Math.floor(Math.random() * types.length)];
-    const r = Math.random() * 16 + 14;
-    shapes.push({
-      x, y, r,
-      vx: (Math.random() - 0.5) * 2,
-      vy: (Math.random() - 0.5) * 2,
-      color: colors[Math.floor(Math.random() * colors.length)],
+    const r = Math.random() * 15 + 14;
+    const shape = {
+      x,
+      y,
+      r,
+      vx: (Math.random() - 0.5) * 3.4,
+      vy: (Math.random() - 0.5) * 3.4,
+      color: neonPalette[Math.floor(Math.random() * neonPalette.length)],
       type,
-    });
+    };
+    shapes.push(shape);
     if (shapes.length >= 20 && !dogDrop) {
       dogDrop = true;
-      easter?.classList.add('show');
-      setTimeout(() => easter?.classList.remove('show'), 3000);
+      dogs = [
+        { x: view.w * 0.43, y: -60, vy: 1.6, done: false },
+        { x: view.w * 0.57, y: -90, vy: 1.6, done: false },
+      ];
+      easter.textContent = 'teddy & bear 🐾';
+      easter.classList.add('show');
+      setTimeout(() => easter.classList.remove('show'), 3500);
     }
+  }
+
+  function drawFloorGrid() {
+    if (!ctx) return;
+    const horizon = view.h * 0.54;
+    ctx.fillStyle = 'rgba(14, 10, 24, 0.45)';
+    ctx.fillRect(0, horizon, view.w, view.h - horizon);
+
+    ctx.strokeStyle = 'rgba(210, 172, 255, 0.12)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 15; i++) {
+      const t = i / 14;
+      const y = horizon + Math.pow(t, 1.6) * (view.h - horizon);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(view.w, y);
+      ctx.stroke();
+    }
+    for (let i = -8; i <= 8; i++) {
+      const x = view.w / 2 + i * 60;
+      ctx.beginPath();
+      ctx.moveTo(x, horizon);
+      ctx.lineTo(view.w / 2 + i * 125, view.h);
+      ctx.stroke();
+    }
+  }
+
+  function drawShadow(s) {
+    const floorY = gravity > 0 ? view.h - 12 : 12;
+    const dist = Math.abs(floorY - s.y);
+    const alpha = Math.max(0.08, 0.22 - dist / 1400);
+    ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(s.x, floorY, s.r * 0.95, s.r * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function shade(color, amount) {
+    const n = parseInt(color.slice(1), 16);
+    const r = Math.max(0, Math.min(255, ((n >> 16) & 255) + amount));
+    const g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amount));
+    const b = Math.max(0, Math.min(255, (n & 255) + amount));
+    return `rgb(${r}, ${g}, ${b})`;
   }
 
   function drawShape(s) {
     if (!ctx) return;
-    ctx.fillStyle = s.color;
-    ctx.beginPath();
-    if (s.type === 'circle') ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    if (s.type === 'square') ctx.rect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
-    if (s.type === 'triangle') {
-      ctx.moveTo(s.x, s.y - s.r);
-      ctx.lineTo(s.x - s.r, s.y + s.r);
-      ctx.lineTo(s.x + s.r, s.y + s.r);
+    drawShadow(s);
+
+    if (s.type === 'circle') {
+      const grad = ctx.createRadialGradient(s.x - s.r * 0.4, s.y - s.r * 0.5, s.r * 0.25, s.x, s.y, s.r * 1.1);
+      grad.addColorStop(0, shade(s.color, 65));
+      grad.addColorStop(0.45, s.color);
+      grad.addColorStop(1, shade(s.color, -70));
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (s.type === 'square') {
+      const grad = ctx.createLinearGradient(s.x - s.r, s.y - s.r, s.x + s.r, s.y + s.r);
+      grad.addColorStop(0, shade(s.color, 40));
+      grad.addColorStop(1, shade(s.color, -55));
+      ctx.fillStyle = grad;
+      ctx.fillRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+      ctx.strokeRect(s.x - s.r, s.y - s.r, s.r * 2, s.r * 2);
+    } else {
+      const top = { x: s.x, y: s.y - s.r };
+      const left = { x: s.x - s.r, y: s.y + s.r };
+      const right = { x: s.x + s.r, y: s.y + s.r };
+
+      ctx.fillStyle = shade(s.color, 28);
+      ctx.beginPath();
+      ctx.moveTo(top.x, top.y);
+      ctx.lineTo(left.x, left.y);
+      ctx.lineTo(s.x, s.y + s.r * 0.35);
       ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = shade(s.color, -10);
+      ctx.beginPath();
+      ctx.moveTo(top.x, top.y);
+      ctx.lineTo(s.x, s.y + s.r * 0.35);
+      ctx.lineTo(right.x, right.y);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = shade(s.color, -45);
+      ctx.beginPath();
+      ctx.moveTo(left.x, left.y);
+      ctx.lineTo(s.x, s.y + s.r * 0.35);
+      ctx.lineTo(right.x, right.y);
+      ctx.closePath();
+      ctx.fill();
     }
+  }
+
+  function drawDogFace(d) {
+    const r = 24;
+    ctx.fillStyle = '#b67a4d';
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#9b5f36';
+    ctx.beginPath();
+    ctx.arc(d.x - 17, d.y - 19, 9, 0, Math.PI * 2);
+    ctx.arc(d.x + 17, d.y - 19, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#1b120d';
+    ctx.beginPath();
+    ctx.arc(d.x - 8, d.y - 4, 3, 0, Math.PI * 2);
+    ctx.arc(d.x + 8, d.y - 4, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#5a341d';
+    ctx.beginPath();
+    ctx.arc(d.x, d.y + 6, 5, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  function drawDogs() {
-    if (!ctx || !dogDrop) return;
-    const t = (performance.now() % 3500) / 3500;
-    const y = t < 0.7 ? -80 + t * 520 : 290;
-    ctx.font = '42px Space Grotesk';
-    ctx.fillText('🐕', 220, y);
-    ctx.fillText('🐕', 280, y + 6);
+  function pushFlash(x, y) {
+    flashes.push({ x, y, life: 16, max: 16 });
+  }
+
+  function drawFlashes() {
+    flashes = flashes.filter((f) => f.life > 0);
+    flashes.forEach((f) => {
+      f.life -= 1;
+      const p = 1 - f.life / f.max;
+      const a = 0.35 * (1 - p);
+      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      ctx.beginPath();
+      ctx.arc(f.x, f.y, 8 + p * 18, 0, Math.PI * 2);
+      ctx.fill();
+    });
   }
 
   function update() {
     if (!running || !ctx || !canvas) return;
-    const w = canvas.width / Math.min(window.devicePixelRatio, 2);
-    const h = canvas.height / Math.min(window.devicePixelRatio, 2);
-    ctx.clearRect(0, 0, w, h);
+    ctx.clearRect(0, 0, view.w, view.h);
+    drawFloorGrid();
 
     for (let i = 0; i < shapes.length; i++) {
       const s = shapes[i];
@@ -124,15 +278,15 @@
         s.y += s.vy;
       }
 
-      const floor = gravity > 0 ? h - s.r : s.r;
+      const floor = gravity > 0 ? view.h - s.r : s.r;
       if ((gravity > 0 && s.y > floor) || (gravity < 0 && s.y < floor)) {
         s.y = floor;
-        s.vy *= -0.72;
-        s.vx *= 0.98;
+        s.vy *= -0.74;
+        s.vx *= 0.985;
       }
-      if (s.x < s.r || s.x > w - s.r) {
-        s.vx *= -0.82;
-        s.x = Math.max(s.r, Math.min(w - s.r, s.x));
+      if (s.x < s.r || s.x > view.w - s.r) {
+        s.vx *= -0.84;
+        s.x = Math.max(s.r, Math.min(view.w - s.r, s.x));
       }
 
       for (let j = i + 1; j < shapes.length; j++) {
@@ -149,13 +303,33 @@
           s.y -= ny * overlap;
           o.x += nx * overlap;
           o.y += ny * overlap;
-          s.vx -= nx * 0.45; s.vy -= ny * 0.45;
-          o.vx += nx * 0.45; o.vy += ny * 0.45;
+          s.vx -= nx * 0.55;
+          s.vy -= ny * 0.55;
+          o.vx += nx * 0.55;
+          o.vy += ny * 0.55;
+          pushFlash((s.x + o.x) * 0.5, (s.y + o.y) * 0.5);
         }
       }
+
       drawShape(s);
     }
-    drawDogs();
+
+    if (dogDrop) {
+      dogs.forEach((d) => {
+        if (!d.done) {
+          d.vy += 0.22;
+          d.y += d.vy;
+          if (d.y > view.h * 0.58) {
+            d.y = view.h * 0.58;
+            d.vy *= -0.35;
+            if (Math.abs(d.vy) < 1) d.done = true;
+          }
+        }
+        drawDogFace(d);
+      });
+    }
+
+    drawFlashes();
     animId = requestAnimationFrame(update);
   }
 
@@ -164,16 +338,17 @@
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
-  if (canvas && sectionG) {
-    for (let i = 0; i < 8; i++) spawn();
+  if (canvas && sectionG && ctx && easter) {
     resizeCanvas();
+    for (let i = 0; i < 10; i++) spawn(Math.random() * (view.w - 160) + 80, Math.random() * 260 + 10);
+
     window.addEventListener('resize', resizeCanvas);
 
     canvas.addEventListener('pointerdown', (e) => {
       const p = pointerPos(e);
       let hit = null;
       shapes.forEach((s, i) => {
-        if (Math.hypot(p.x - s.x, p.y - s.y) < s.r) hit = i;
+        if (Math.hypot(p.x - s.x, p.y - s.y) < s.r + 2) hit = i;
       });
       if (hit !== null) {
         dragId = hit;
@@ -181,27 +356,47 @@
         spawn(p.x, p.y);
       }
     });
+
     canvas.addEventListener('pointermove', (e) => {
       if (dragId === null) return;
       const p = pointerPos(e);
       const s = shapes[dragId];
-      s.x = p.x; s.y = p.y; s.vx = 0; s.vy = 0;
+      s.x = p.x;
+      s.y = p.y;
+      s.vx = 0;
+      s.vy = 0;
     });
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) =>
-      canvas.addEventListener(ev, () => (dragId = null))
-    );
+
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => {
+      canvas.addEventListener(ev, () => {
+        dragId = null;
+      });
+    });
 
     shakeBtn?.addEventListener('click', () => {
-      shapes.forEach((s) => { s.vx += (Math.random() - 0.5) * 9; s.vy += (Math.random() - 0.5) * 9; });
-    });
-    flipBtn?.addEventListener('click', () => { gravity *= -1; });
-
-    new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        running = entry.isIntersecting;
-        if (running) update();
-        else cancelAnimationFrame(animId);
+      shakeBtn.classList.remove('pulse');
+      void shakeBtn.offsetWidth;
+      shakeBtn.classList.add('pulse');
+      shapes.forEach((s) => {
+        s.vx += (Math.random() - 0.5) * 10;
+        s.vy += (Math.random() - 0.5) * 10;
       });
-    }, { threshold: 0.2 }).observe(sectionG);
+    });
+
+    flipBtn?.addEventListener('click', () => {
+      gravity *= -1;
+      flipBtn.classList.toggle('flipped', gravity < 0);
+    });
+
+    new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          running = entry.isIntersecting;
+          if (running) update();
+          else cancelAnimationFrame(animId);
+        });
+      },
+      { threshold: 0.2 }
+    ).observe(sectionG);
   }
 </script>

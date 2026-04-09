@@ -5,14 +5,16 @@ import Layout from '../layouts/Layout.astro';
 <Layout title="Rebecca">
   <main class="rebecca-wrap">
     <div id="hearts" aria-hidden="true"></div>
+    <div id="sparkles" aria-hidden="true"></div>
     <h1>Rebecca</h1>
+    <div class="vignette" aria-hidden="true"></div>
   </main>
 </Layout>
 
 <style>
   .rebecca-wrap {
     min-height: 100svh;
-    background: #0a0a0a;
+    background: radial-gradient(circle at center, #120008 0%, #0a0a0a 72%);
     display: grid;
     place-items: center;
     overflow: hidden;
@@ -20,49 +22,132 @@ import Layout from '../layouts/Layout.astro';
   }
   h1 {
     margin: 0;
-    font-size: clamp(3rem, 14vw, 9rem);
-    color: #ff69b4;
-    letter-spacing: 0.04em;
-    text-shadow: 0 0 10px rgba(255, 20, 147, 0.5), 0 0 28px rgba(255, 20, 147, 0.65);
-    animation: heartbeat 2.2s infinite;
-    z-index: 2;
+    font-family: 'Dancing Script', cursive;
+    font-size: clamp(4rem, 16vw, 11rem);
+    color: #ff86b4;
+    letter-spacing: 0.03em;
+    text-shadow:
+      0 0 8px rgba(255, 136, 189, 0.9),
+      0 0 24px rgba(255, 88, 160, 0.75),
+      0 0 48px rgba(255, 65, 145, 0.55),
+      0 0 90px rgba(255, 88, 160, 0.35);
+    animation: heartPulse 2.35s infinite;
+    z-index: 3;
   }
-  @keyframes heartbeat {
-    0%, 32%, 100% { transform: scale(1); text-shadow: 0 0 10px rgba(255, 20, 147, 0.45), 0 0 26px rgba(255, 20, 147, 0.6); }
-    8% { transform: scale(1.05); text-shadow: 0 0 16px rgba(255, 20, 147, 0.7), 0 0 44px rgba(255, 20, 147, 0.9); }
+  @keyframes heartPulse {
+    0%, 36%, 100% { transform: scale(1); }
+    8% { transform: scale(1.08); }
     16% { transform: scale(1.02); }
-    24% { transform: scale(1.05); text-shadow: 0 0 16px rgba(255, 105, 180, 0.75), 0 0 42px rgba(255, 20, 147, 0.85); }
+    24% { transform: scale(1.09); }
+    30% { transform: scale(1); }
   }
-  #hearts {
+
+  #hearts,
+  #sparkles {
     position: absolute;
     inset: 0;
     overflow: hidden;
   }
+
   .heart {
     position: absolute;
-    bottom: -2rem;
-    color: rgba(255, 105, 180, 0.6);
-    animation: floatUp linear forwards;
+    width: var(--size);
+    height: var(--size);
+    bottom: -80px;
+    background: var(--color);
+    transform: rotate(45deg);
+    border-radius: 24% 24% 8% 8%;
+    box-shadow: 0 0 14px var(--glow), 0 0 28px var(--glow);
+    animation: floatHeart var(--dur) linear forwards;
+    filter: blur(var(--blur));
+    opacity: 0.72;
   }
-  @keyframes floatUp {
-    to { transform: translateY(-115vh) translateX(var(--drift)); opacity: 0; }
+  .heart::before,
+  .heart::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: inherit;
+  }
+  .heart::before { left: -50%; top: 0; }
+  .heart::after { left: 0; top: -50%; }
+
+  @keyframes floatHeart {
+    0% {
+      transform: translateX(0) translateY(0) rotate(45deg);
+      opacity: 0;
+    }
+    10% { opacity: 0.75; }
+    100% {
+      transform: translateX(var(--sway)) translateY(-120vh) rotate(45deg);
+      opacity: 0;
+    }
+  }
+
+  .sparkle {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+    animation: sparkle 2s ease-out forwards;
+  }
+
+  @keyframes sparkle {
+    0% { transform: scale(0.2); opacity: 0; }
+    30% { opacity: 1; }
+    100% { transform: scale(1.2); opacity: 0; }
+  }
+
+  .vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, transparent 55%, rgba(255, 60, 140, 0.08) 100%);
+    z-index: 2;
   }
 </style>
 
 <script>
   const hearts = document.getElementById('hearts');
+  const sparkles = document.getElementById('sparkles');
+  const colors = ['#ff7db6', '#ff5fa7', '#ff8f9f', '#f88cbf', '#ffa3c7'];
+
   function spawnHeart() {
     if (!hearts) return;
     const h = document.createElement('span');
     h.className = 'heart';
-    h.textContent = '♥';
+    const size = Math.random() * 24 + 14;
+    const blur = Math.random() < 0.35 ? `${(Math.random() * 1.7 + 0.6).toFixed(2)}px` : '0px';
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    h.style.setProperty('--size', `${size}px`);
+    h.style.setProperty('--blur', blur);
+    h.style.setProperty('--color', color);
+    h.style.setProperty('--glow', `${color}88`);
+    h.style.setProperty('--sway', `${(Math.random() - 0.5) * 140}px`);
+    h.style.setProperty('--dur', `${Math.random() * 4.8 + 7.5}s`);
     h.style.left = `${Math.random() * 100}%`;
-    h.style.fontSize = `${Math.random() * 30 + 12}px`;
-    h.style.setProperty('--drift', `${(Math.random() - 0.5) * 60}px`);
-    h.style.animationDuration = `${Math.random() * 4 + 5}s`;
     hearts.appendChild(h);
-    setTimeout(() => h.remove(), 9000);
+    setTimeout(() => h.remove(), 13000);
   }
-  for (let i = 0; i < 24; i++) setTimeout(spawnHeart, i * 190);
+
+  function spawnSparkle() {
+    if (!sparkles) return;
+    const s = document.createElement('span');
+    s.className = 'sparkle';
+    const cx = 50 + (Math.random() - 0.5) * 18;
+    const cy = 50 + (Math.random() - 0.5) * 18;
+    s.style.left = `${cx}%`;
+    s.style.top = `${cy}%`;
+    s.style.animationDuration = `${Math.random() * 1.4 + 1.2}s`;
+    sparkles.appendChild(s);
+    setTimeout(() => s.remove(), 2400);
+  }
+
+  for (let i = 0; i < 30; i++) setTimeout(spawnHeart, i * 180);
   setInterval(spawnHeart, 260);
+  setInterval(spawnSparkle, 210);
 </script>

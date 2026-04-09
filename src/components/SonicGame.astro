@@ -1,10 +1,10 @@
 <section class="play-section sonic" id="arcade">
   <h2 class="section-title arcade-title">KEREHAMA'S ARCADE</h2>
   <div class="game-wrap">
-    <canvas id="sonic-canvas" width="1000" height="420"></canvas>
-    <div id="score">0</div>
+    <canvas id="sonic-canvas" width="640" height="360"></canvas>
+    <div id="score">SCORE 0000</div>
     <div id="game-over" class="hidden">
-      <p id="over-text"></p>
+      <p id="over-text">GAME OVER</p>
       <button id="again">play again</button>
     </div>
   </div>
@@ -12,50 +12,76 @@
 
 <style>
   .sonic {
-    background: radial-gradient(circle at center, rgba(0, 81, 168, 0.22), #0a0a0a 62%);
+    background: radial-gradient(circle at 50% 25%, rgba(74, 193, 255, 0.2), #0a0a0a 64%);
     color: #b9d9ff;
   }
   .arcade-title {
     font-family: 'Press Start 2P', monospace;
-    font-size: clamp(1rem, 3.3vw, 2rem);
-    color: var(--gold);
-    text-shadow: 0 0 14px rgba(255, 215, 0, 0.4);
-    line-height: 1.5;
+    font-size: clamp(1rem, 3vw, 1.9rem);
+    color: #ffd700;
+    text-shadow: 0 0 14px rgba(255, 215, 0, 0.42);
+    line-height: 1.45;
   }
   .game-wrap {
     position: relative;
-    width: min(1000px, 100%);
+    width: min(960px, 100%);
   }
   #sonic-canvas {
     width: 100%;
-    border: 2px solid rgba(255, 215, 0, 0.35);
-    border-radius: 1rem;
-    background: linear-gradient(#062f60, #071321 70%);
+    aspect-ratio: 16 / 9;
+    image-rendering: pixelated;
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    border-radius: 0.9rem;
+    background: #113;
     touch-action: manipulation;
+    box-shadow: 0 0 24px rgba(74, 193, 255, 0.2);
   }
   #score {
     position: absolute;
-    right: 0.9rem;
+    left: 0.9rem;
     top: 0.9rem;
-    font-weight: 700;
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(0.7rem, 1.4vw, 1rem);
     color: #ffd700;
-    text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+    letter-spacing: 0.04em;
   }
   #game-over {
     position: absolute;
     inset: 0;
-    background: rgba(5, 5, 14, 0.8);
     display: grid;
     place-items: center;
+    align-content: center;
+    gap: 1.2rem;
+    background: rgba(4, 8, 20, 0.78);
+    backdrop-filter: blur(2px);
     text-align: center;
+    border-radius: 0.9rem;
   }
-  #game-over.hidden { display: none; }
+  #game-over.hidden {
+    display: none;
+  }
+  #over-text {
+    margin: 0;
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(1rem, 2.3vw, 1.8rem);
+    color: #ffd700;
+    text-shadow: 0 0 16px rgba(255, 215, 0, 0.85), 0 0 32px rgba(74, 193, 255, 0.5);
+    line-height: 1.5;
+    white-space: pre-line;
+  }
   #again {
-    background: #ffd700;
-    color: #111;
-    border-radius: 0.5rem;
-    padding: 0.6rem 1rem;
-    font-weight: 700;
+    background: linear-gradient(#ffe470, #ffc400);
+    color: #1b1b1b;
+    border-radius: 0.4rem;
+    padding: 0.7rem 1rem;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.65rem;
+    box-shadow: 0 6px 0 #9d7000;
+  }
+  #again:active {
+    transform: translateY(2px);
+    box-shadow: 0 4px 0 #9d7000;
   }
 </style>
 
@@ -72,125 +98,329 @@
   let rafS;
   let world;
 
+  const GAME = {
+    width: 640,
+    height: 360,
+    groundY: 286,
+    speed: 3.2,
+  };
+
   function resetGame() {
     world = {
-      sonic: { x: 100, y: 300, vy: 0, onGround: true },
+      sonic: { x: 118, y: GAME.groundY - 34, vy: 0, onGround: true, step: 0 },
       obstacles: [],
       rings: [],
+      clouds: Array.from({ length: 7 }, (_, i) => ({
+        x: i * 110 + Math.random() * 40,
+        y: 40 + Math.random() * 85,
+        size: 18 + Math.random() * 20,
+        speed: 0.2 + Math.random() * 0.3,
+      })),
+      hills: Array.from({ length: 4 }, (_, i) => ({
+        x: i * 210,
+        h: 45 + Math.random() * 28,
+        w: 200 + Math.random() * 40,
+      })),
+      particles: [],
       score: 0,
       tick: 0,
       gameOver: false,
     };
-    scoreEl.textContent = '0';
-    gameOverEl.classList.add('hidden');
+    if (scoreEl) scoreEl.textContent = 'SCORE 0000';
+    gameOverEl?.classList.add('hidden');
   }
 
   function jump() {
-    if (!world || world.gameOver) return;
-    if (world.sonic.onGround) {
-      world.sonic.vy = -11.5;
-      world.sonic.onGround = false;
-    }
+    if (!world || world.gameOver || !world.sonic.onGround) return;
+    world.sonic.vy = -11.8;
+    world.sonic.onGround = false;
   }
 
   function spawnObstacle() {
-    world.obstacles.push({ x: 1040, y: 330, w: 26, h: 38 });
+    const size = 26 + Math.random() * 16;
+    world.obstacles.push({ x: GAME.width + 30, size, height: 24 + Math.random() * 26 });
   }
+
   function spawnRing() {
-    world.rings.push({ x: 1040, y: 200 + Math.random() * 120, r: 11 });
+    world.rings.push({
+      x: GAME.width + 10,
+      y: 120 + Math.random() * 130,
+      r: 10,
+      bob: Math.random() * Math.PI,
+    });
+  }
+
+  function spawnRingBurst(x, y) {
+    const count = 10;
+    for (let i = 0; i < count; i++) {
+      const ang = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+      const speed = 1.6 + Math.random() * 2.3;
+      world.particles.push({
+        x,
+        y,
+        vx: Math.cos(ang) * speed,
+        vy: Math.sin(ang) * speed - 0.6,
+        life: 34 + Math.random() * 22,
+        maxLife: 56,
+      });
+    }
+  }
+
+  function drawSky(tick) {
+    const grad = ctxS.createLinearGradient(0, 0, 0, GAME.groundY);
+    grad.addColorStop(0, '#4ac1ff');
+    grad.addColorStop(1, '#1a6bc4');
+    ctxS.fillStyle = grad;
+    ctxS.fillRect(0, 0, GAME.width, GAME.groundY);
+
+    world.hills.forEach((h) => {
+      const x = ((h.x - tick * 0.55) % (GAME.width + 220)) - 80;
+      ctxS.fillStyle = 'rgba(29, 116, 176, 0.55)';
+      ctxS.beginPath();
+      ctxS.moveTo(x, GAME.groundY);
+      ctxS.quadraticCurveTo(x + h.w * 0.5, GAME.groundY - h.h, x + h.w, GAME.groundY);
+      ctxS.closePath();
+      ctxS.fill();
+    });
+
+    world.clouds.forEach((c) => {
+      c.x -= c.speed;
+      if (c.x < -60) c.x = GAME.width + 30;
+      ctxS.fillStyle = 'rgba(255,255,255,0.88)';
+      ctxS.beginPath();
+      ctxS.arc(c.x, c.y, c.size * 0.45, 0, Math.PI * 2);
+      ctxS.arc(c.x + c.size * 0.4, c.y + 4, c.size * 0.35, 0, Math.PI * 2);
+      ctxS.arc(c.x - c.size * 0.4, c.y + 5, c.size * 0.3, 0, Math.PI * 2);
+      ctxS.fill();
+    });
+  }
+
+  function drawGround(tick) {
+    const tile = 20;
+    for (let y = GAME.groundY; y < GAME.height; y += tile) {
+      for (let x = 0; x < GAME.width; x += tile) {
+        const moving = Math.floor((x + tick * GAME.speed) / tile);
+        const alt = (moving + Math.floor(y / tile)) % 2 === 0;
+        ctxS.fillStyle = alt ? '#2d8a4e' : '#3ea95d';
+        ctxS.fillRect(x, y, tile, tile);
+      }
+    }
+    ctxS.strokeStyle = 'rgba(0,0,0,0.15)';
+    for (let x = 0; x < GAME.width; x += tile) {
+      ctxS.beginPath();
+      ctxS.moveTo(x, GAME.groundY);
+      ctxS.lineTo(x, GAME.height);
+      ctxS.stroke();
+    }
+    ctxS.fillStyle = 'rgba(102, 60, 30, 0.45)';
+    ctxS.fillRect(0, GAME.groundY, GAME.width, 8);
   }
 
   function drawSonic(s) {
-    ctxS.fillStyle = '#1d8cff';
+    const x = Math.round(s.x);
+    const y = Math.round(s.y);
+    const bob = s.onGround ? Math.sin(s.step * 0.5) * 1.2 : 0;
+
+    ctxS.save();
+    ctxS.translate(x, y + bob);
+
+    // back spikes
+    ctxS.fillStyle = '#1870dc';
     ctxS.beginPath();
-    ctxS.arc(s.x, s.y, 20, 0, Math.PI * 2);
+    ctxS.moveTo(-20, -14);
+    ctxS.lineTo(-42, -20);
+    ctxS.lineTo(-26, -5);
+    ctxS.closePath();
     ctxS.fill();
-    for (let i = 0; i < 6; i++) {
-      const ang = -Math.PI / 2 + i * (Math.PI / 6);
+
+    ctxS.beginPath();
+    ctxS.moveTo(-22, -2);
+    ctxS.lineTo(-44, 2);
+    ctxS.lineTo(-26, 12);
+    ctxS.closePath();
+    ctxS.fill();
+
+    ctxS.beginPath();
+    ctxS.moveTo(-18, 10);
+    ctxS.lineTo(-37, 22);
+    ctxS.lineTo(-16, 22);
+    ctxS.closePath();
+    ctxS.fill();
+
+    // body
+    ctxS.fillRect(-18, -18, 30, 33);
+    ctxS.fillStyle = '#0f56af';
+    ctxS.fillRect(-18, 8, 30, 7);
+
+    // belly
+    ctxS.fillStyle = '#f3c997';
+    ctxS.beginPath();
+    ctxS.arc(-2, 4, 12, 0, Math.PI * 2);
+    ctxS.fill();
+
+    // eye + muzzle
+    ctxS.fillStyle = '#fff';
+    ctxS.fillRect(2, -15, 11, 9);
+    ctxS.fillStyle = '#111';
+    ctxS.fillRect(9, -13, 3, 4);
+    ctxS.fillStyle = '#f3c997';
+    ctxS.fillRect(6, -6, 10, 9);
+
+    // legs & shoes
+    ctxS.fillStyle = '#1870dc';
+    ctxS.fillRect(-6, 13, 6, 7);
+    ctxS.fillRect(4, 13, 6, 7);
+    ctxS.fillStyle = '#d9292f';
+    ctxS.fillRect(-14, 18, 16, 8);
+    ctxS.fillRect(0, 18, 18, 8);
+    ctxS.fillStyle = '#fff';
+    ctxS.fillRect(-7, 20, 6, 2);
+    ctxS.fillRect(7, 20, 7, 2);
+
+    ctxS.restore();
+  }
+
+  function drawSpike(obs) {
+    const baseY = GAME.groundY;
+    const spikeCount = Math.max(2, Math.floor(obs.size / 11));
+    const width = spikeCount * 12;
+    ctxS.fillStyle = '#9fc2da';
+    for (let i = 0; i < spikeCount; i++) {
+      const sx = obs.x + i * 12;
       ctxS.beginPath();
-      ctxS.moveTo(s.x + Math.cos(ang) * 14, s.y + Math.sin(ang) * 14);
-      ctxS.lineTo(s.x + Math.cos(ang) * 30, s.y + Math.sin(ang) * 30);
-      ctxS.lineWidth = 4;
-      ctxS.strokeStyle = '#1572d6';
+      ctxS.moveTo(sx, baseY);
+      ctxS.lineTo(sx + 6, baseY - obs.height - (i % 2 ? 6 : 0));
+      ctxS.lineTo(sx + 12, baseY);
+      ctxS.closePath();
+      ctxS.fill();
+      ctxS.strokeStyle = '#e6f6ff';
       ctxS.stroke();
     }
+  }
+
+  function drawRing(r) {
+    const pulse = Math.sin(world.tick * 0.08 + r.bob) * 0.8;
+    ctxS.fillStyle = '#ffd700';
+    ctxS.beginPath();
+    ctxS.arc(r.x, r.y + pulse, r.r, 0, Math.PI * 2);
+    ctxS.fill();
+    ctxS.fillStyle = 'rgba(255, 245, 190, 0.9)';
+    ctxS.beginPath();
+    ctxS.arc(r.x - 3, r.y - 3 + pulse, r.r * 0.35, 0, Math.PI * 2);
+    ctxS.fill();
+    ctxS.strokeStyle = '#ffc400';
+    ctxS.lineWidth = 2;
+    ctxS.beginPath();
+    ctxS.arc(r.x, r.y + pulse, r.r, 0, Math.PI * 2);
+    ctxS.stroke();
+  }
+
+  function updateParticles() {
+    world.particles = world.particles.filter((p) => p.life > 0);
+    world.particles.forEach((p) => {
+      p.life -= 1;
+      p.vy += 0.08;
+      p.x += p.vx;
+      p.y += p.vy;
+      const alpha = Math.max(0, p.life / p.maxLife);
+      ctxS.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+      ctxS.beginPath();
+      ctxS.arc(p.x, p.y, 2.4, 0, Math.PI * 2);
+      ctxS.fill();
+    });
   }
 
   function loopS() {
     if (!runningS || !world || !ctxS) return;
-    const w = canvasS.width;
-    const h = canvasS.height;
-    ctxS.clearRect(0, 0, w, h);
-    ctxS.fillStyle = '#1a3f74';
-    ctxS.fillRect(0, 340, w, h - 340);
 
-    world.tick++;
-    if (world.tick % 80 === 0) spawnObstacle();
-    if (world.tick % 55 === 0) spawnRing();
+    ctxS.clearRect(0, 0, GAME.width, GAME.height);
+    world.tick += 1;
 
+    if (world.tick % 96 === 0) spawnObstacle();
+    if (world.tick % 70 === 0) spawnRing();
+
+    drawSky(world.tick);
+    drawGround(world.tick);
+
+    world.sonic.step += 1;
     world.sonic.vy += 0.55;
     world.sonic.y += world.sonic.vy;
-    if (world.sonic.y >= 320) {
-      world.sonic.y = 320;
+    if (world.sonic.y >= GAME.groundY - 34) {
+      world.sonic.y = GAME.groundY - 34;
       world.sonic.vy = 0;
       world.sonic.onGround = true;
     }
 
-    world.obstacles.forEach((o) => (o.x -= 5.2));
-    world.rings.forEach((r) => (r.x -= 5.2));
-    world.obstacles = world.obstacles.filter((o) => o.x > -60);
-    world.rings = world.rings.filter((r) => r.x > -30);
-
-    for (const o of world.obstacles) {
-      ctxS.fillStyle = '#ff4d4d';
-      ctxS.fillRect(o.x, o.y, o.w, o.h);
-      if (world.sonic.x + 17 > o.x && world.sonic.x - 17 < o.x + o.w && world.sonic.y + 18 > o.y) {
+    world.obstacles.forEach((o) => {
+      o.x -= GAME.speed;
+      drawSpike(o);
+      const sonicHitbox = {
+        x: world.sonic.x - 16,
+        y: world.sonic.y - 18,
+        w: 32,
+        h: 38,
+      };
+      if (
+        sonicHitbox.x < o.x + o.size &&
+        sonicHitbox.x + sonicHitbox.w > o.x &&
+        sonicHitbox.y + sonicHitbox.h > GAME.groundY - o.height
+      ) {
         world.gameOver = true;
       }
-    }
-
-    world.rings = world.rings.filter((r) => {
-      ctxS.strokeStyle = '#ffd700';
-      ctxS.lineWidth = 5;
-      ctxS.beginPath();
-      ctxS.arc(r.x, r.y, r.r, 0, Math.PI * 2);
-      ctxS.stroke();
-      const hit = Math.hypot(world.sonic.x - r.x, world.sonic.y - r.y) < 27;
-      if (hit) {
-        world.score += 10;
-        scoreEl.textContent = String(world.score);
-        return false;
-      }
-      return true;
     });
 
+    world.rings = world.rings.filter((r) => {
+      r.x -= GAME.speed;
+      drawRing(r);
+      const hit = Math.hypot(world.sonic.x - r.x, world.sonic.y - r.y) < 26;
+      if (hit) {
+        world.score += 10;
+        spawnRingBurst(r.x, r.y);
+        if (scoreEl) scoreEl.textContent = `SCORE ${String(world.score).padStart(4, '0')}`;
+        return false;
+      }
+      return r.x > -25;
+    });
+
+    world.obstacles = world.obstacles.filter((o) => o.x > -80);
     drawSonic(world.sonic);
+    updateParticles();
 
     if (world.gameOver) {
       runningS = false;
-      gameOverEl.classList.remove('hidden');
-      overText.textContent = `game over — score ${world.score}`;
+      gameOverEl?.classList.remove('hidden');
+      if (overText) overText.textContent = `GAME OVER\nSCORE ${String(world.score).padStart(4, '0')}`;
       return;
     }
+
     rafS = requestAnimationFrame(loopS);
   }
 
-  if (canvasS && sectionS) {
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting && !runningS && !world?.gameOver) {
-          runningS = true;
-          loopS();
-        } else if (!entry.isIntersecting) {
-          runningS = false;
-          cancelAnimationFrame(rafS);
-        }
-      });
-    }, { threshold: 0.25 });
+  if (canvasS && sectionS && ctxS) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !runningS && !world?.gameOver) {
+            runningS = true;
+            loopS();
+          } else if (!entry.isIntersecting) {
+            runningS = false;
+            cancelAnimationFrame(rafS);
+          }
+        });
+      },
+      { threshold: 0.25 }
+    );
     io.observe(sectionS);
 
-    const onJump = (e) => { e.preventDefault(); jump(); };
-    window.addEventListener('keydown', (e) => { if (e.code === 'Space') onJump(e); });
+    const onJump = (e) => {
+      if (e) e.preventDefault();
+      jump();
+    };
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') onJump(e);
+    });
     canvasS.addEventListener('pointerdown', onJump);
     sectionS.addEventListener('pointerdown', onJump);
 

@@ -20,8 +20,8 @@
     width: 100%;
     height: 100%;
   }
-  #three-bg { opacity: 0.35; }
-  #particle-bg { opacity: 0.65; }
+  #three-bg { opacity: 0.4; }
+  #particle-bg { opacity: 0.72; }
   .hero-content {
     position: relative;
     text-align: center;
@@ -75,10 +75,14 @@
     const cursor = taglineEl.querySelector('.cursor');
     taglineEl.firstChild.textContent = '';
     let idx = 0;
-    const typer = setInterval(() => {
+    const typeNext = () => {
       taglineEl.firstChild.textContent += fullText[idx++] || '';
-      if (idx >= fullText.length) clearInterval(typer);
-    }, 65);
+      if (idx < fullText.length) {
+        const delay = Math.floor(Math.random() * 51) + 40;
+        setTimeout(typeNext, delay);
+      }
+    };
+    setTimeout(typeNext, 120);
     if (!cursor) taglineEl.innerHTML += '<span class="cursor">|</span>';
   }
 
@@ -102,7 +106,7 @@
 
   let threeState = null;
   function startThree() {
-    if (threeState || !window.THREE || !threeCanvas) return;
+    if (threeState || !window.THREE || !threeCanvas || !hero) return;
     const scene = new window.THREE.Scene();
     const camera = new window.THREE.PerspectiveCamera(70, hero.clientWidth / hero.clientHeight, 0.1, 1000);
     const renderer = new window.THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
@@ -110,17 +114,31 @@
     renderer.setSize(hero.clientWidth, hero.clientHeight);
     camera.position.z = 35;
 
-    const geometry = new window.THREE.TorusKnotGeometry(8, 1.8, 120, 16);
+    const geometry = new window.THREE.IcosahedronGeometry(10, 1);
     const material = new window.THREE.MeshBasicMaterial({ color: 0x00f5ff, wireframe: true });
-    const knot = new window.THREE.Mesh(geometry, material);
-    scene.add(knot);
+    const mesh = new window.THREE.Mesh(geometry, material);
+    scene.add(mesh);
 
+    const hueCycle = [190, 265, 325, 190];
+    let phase = 0;
+    let mix = 0;
     let raf;
+
     const animate = () => {
-      knot.rotation.x += 0.003;
-      knot.rotation.y += 0.005;
+      mesh.rotation.x += 0.003;
+      mesh.rotation.y += 0.0046;
+
+      mix += 0.0022;
+      if (mix >= 1) {
+        mix = 0;
+        phase = (phase + 1) % (hueCycle.length - 1);
+      }
+      const hue = hueCycle[phase] + (hueCycle[phase + 1] - hueCycle[phase]) * mix;
+      material.color.setHSL(hue / 360, 1, 0.62);
+
       renderer.render(scene, camera);
       raf = requestAnimationFrame(animate);
+      threeState.raf = raf;
     };
 
     const onResize = () => {
@@ -129,25 +147,27 @@
       renderer.setSize(hero.clientWidth, hero.clientHeight);
     };
     window.addEventListener('resize', onResize);
-    animate();
 
-    threeState = { raf, renderer, onResize };
+    threeState = { raf: 0, renderer, onResize, scene, geometry, material };
+    animate();
   }
 
   function stopThree() {
     if (!threeState) return;
     cancelAnimationFrame(threeState.raf);
     window.removeEventListener('resize', threeState.onResize);
+    threeState.geometry.dispose();
+    threeState.material.dispose();
     threeState.renderer.dispose();
     threeState = null;
   }
 
   let particleState = null;
   function startParticles() {
-    if (particleState || !particleCanvas) return;
+    if (particleState || !particleCanvas || !hero) return;
     const ctx = particleCanvas.getContext('2d');
     const particles = [];
-    const count = 200;
+    const count = 180;
     const mouse = { x: -9999, y: -9999 };
 
     const resize = () => {
@@ -158,17 +178,18 @@
     window.addEventListener('resize', resize);
 
     for (let i = 0; i < count; i++) {
-      particles.push({
+      const p = {
         x: Math.random() * particleCanvas.width,
         y: Math.random() * particleCanvas.height,
         ox: 0,
         oy: 0,
         vx: (Math.random() - 0.5) * 0.5,
         vy: (Math.random() - 0.5) * 0.5,
-        size: Math.random() * 2 + 0.7,
-      });
-      particles[i].ox = particles[i].x;
-      particles[i].oy = particles[i].y;
+        size: Math.random() * 2.2 + 1.4,
+      };
+      p.ox = p.x;
+      p.oy = p.y;
+      particles.push(p);
     }
 
     const onMove = (e) => {
@@ -177,10 +198,14 @@
       mouse.y = e.clientY - r.top;
     };
     hero.addEventListener('mousemove', onMove);
-    hero.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+    hero.addEventListener('mouseleave', () => {
+      mouse.x = -9999;
+      mouse.y = -9999;
+    });
 
     let raf;
     const loop = () => {
+      if (!ctx) return;
       ctx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
       for (const p of particles) {
         const dx = p.x - mouse.x;
@@ -197,15 +222,23 @@
         p.vy *= 0.97;
         p.x += p.vx;
         p.y += p.vy;
-        ctx.fillStyle = 'rgba(0,245,255,0.8)';
+
+        ctx.fillStyle = 'rgba(0,245,255,0.18)';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 2.7, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(0,245,255,0.88)';
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
       }
       raf = requestAnimationFrame(loop);
+      particleState.raf = raf;
     };
+
+    particleState = { raf: 0, resize, onMove };
     loop();
-    particleState = { raf, resize, onMove };
   }
 
   function stopParticles() {

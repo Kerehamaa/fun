@@ -1,82 +1,151 @@
-<button id="prince-paw" aria-label="Prince tribute">🐾</button>
 <div id="prince-overlay" aria-hidden="true">
-  <div class="stars" id="stars"></div>
-  <svg viewBox="0 0 200 220" class="cat" aria-hidden="true">
-    <path d="M50 190 C48 140, 60 100, 95 84 C112 75,125 58,130 40 L144 62 C160 76,167 98,166 130 C165 165,150 190,120 194 C95 197,75 198,50 190Z M78 132 C84 128,90 128,96 132 M112 132 C118 128,124 128,130 132 M95 145 Q105 152 115 145" fill="none" stroke="#ffd59a" stroke-width="5" stroke-linecap="round"/>
-  </svg>
-  <h3>Prince 👑</h3>
+  <div class="prince-bg-pulse"></div>
+  <div class="gold-drift" id="prince-stars"></div>
+  <div class="prince-stage">
+    <div class="crown" aria-hidden="true">👑</div>
+    <svg viewBox="0 0 220 260" class="cat" aria-hidden="true">
+      <path
+        d="M91 46 L104 70 L117 46 L132 72 C149 83 159 106 158 130 C157 162 143 188 124 203 C123 214 129 225 142 229 C162 235 182 229 191 214 C198 202 195 182 178 173 C172 170 169 162 173 156 C177 149 188 147 196 152 C222 168 227 206 209 229 C188 256 140 255 113 236 C95 223 88 210 82 190 C76 171 73 152 71 130 C70 105 78 83 94 71 Z"
+      />
+    </svg>
+    <h3>Prince</h3>
+  </div>
 </div>
 
 <style>
-  #prince-paw {
-    position: absolute;
-    bottom: 1.4rem;
-    right: 1.2rem;
-    background: transparent;
-    color: #1a1a1a;
-    border: none;
-    font-size: 1.1rem;
-    opacity: 0.6;
-    z-index: 10;
-  }
   #prince-overlay {
     position: fixed;
     inset: 0;
-    background: #1a0030;
+    background: radial-gradient(circle at center, #2a0d47 0%, #0d001a 68%);
     display: grid;
     place-items: center;
-    align-content: center;
-    gap: 1rem;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 600ms ease;
-    z-index: 2000;
+    transition: opacity 760ms ease;
+    z-index: 2200;
+    filter: brightness(0.92);
   }
   #prince-overlay.open {
     opacity: 1;
     pointer-events: auto;
+    animation: breathe 6s ease-in-out infinite;
   }
-  #prince-overlay .cat { width: min(260px, 50vw); opacity: 0; transform: translateY(10px); transition: all 900ms ease; }
-  #prince-overlay h3 {
-    margin: 0;
-    color: #ffd700;
-    font-size: clamp(2rem, 8vw, 4rem);
-    font-weight: 500;
-    letter-spacing: 0.1em;
+  .prince-bg-pulse {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255, 213, 154, 0.08), transparent 65%);
+    mix-blend-mode: screen;
+  }
+  .prince-stage {
+    position: relative;
+    display: grid;
+    place-items: center;
+    gap: 0.7rem;
+    z-index: 2;
+  }
+  .cat {
+    width: min(240px, 50vw);
     opacity: 0;
-    transition: opacity 1200ms ease 250ms;
+    transform: translateY(14px) scale(0.97);
+    transition: opacity 980ms ease 0.8s, transform 980ms ease 0.8s;
+    filter: drop-shadow(0 0 14px rgba(255, 213, 154, 0.5));
   }
-  #prince-overlay.open .cat { opacity: 1; transform: translateY(0); }
-  #prince-overlay.open h3 { opacity: 1; }
-  .stars {
+  .cat path {
+    fill: #ffd59a;
+  }
+  h3 {
+    margin: 0;
+    font-family: 'Times New Roman', 'Cormorant Garamond', serif;
+    font-size: clamp(2.2rem, 8vw, 4.2rem);
+    letter-spacing: 0.08em;
+    color: #ffd59a;
+    opacity: 0;
+    transform: translateY(10px);
+    text-shadow: 0 0 10px rgba(255, 213, 154, 0.55), 0 0 26px rgba(255, 213, 154, 0.35);
+    transition: opacity 880ms ease 1.5s, transform 880ms ease 1.5s;
+  }
+  .crown {
+    position: absolute;
+    top: -2.8rem;
+    font-size: clamp(1.2rem, 4vw, 2rem);
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+    transition: opacity 700ms ease 2s, transform 700ms ease 2s;
+    filter: drop-shadow(0 0 8px rgba(255, 213, 154, 0.6));
+  }
+  #prince-overlay.open .cat,
+  #prince-overlay.open h3,
+  #prince-overlay.open .crown {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .gold-drift {
     position: absolute;
     inset: 0;
     overflow: hidden;
   }
-  .star {
+  .gold-star {
     position: absolute;
-    color: rgba(255, 215, 0, 0.9);
-    animation: twinkle 2s infinite ease-in-out;
+    background: radial-gradient(circle, rgba(255, 230, 173, 0.95), rgba(255, 205, 120, 0));
+    border-radius: 50%;
+    animation: drift linear infinite;
+    opacity: 0;
   }
-  @keyframes twinkle { 50% { opacity: 0.2; transform: scale(0.7); } }
+
+  @keyframes drift {
+    0% { transform: translate3d(0, 15px, 0) scale(0.8); opacity: 0; }
+    20% { opacity: 0.9; }
+    100% { transform: translate3d(var(--driftX), -110vh, 0) scale(1.15); opacity: 0; }
+  }
+  @keyframes breathe {
+    0%, 100% { filter: brightness(0.92); }
+    50% { filter: brightness(1); }
+  }
 </style>
 
 <script>
-  const paw = document.getElementById('prince-paw');
   const overlay = document.getElementById('prince-overlay');
-  const stars = document.getElementById('stars');
-  if (stars) {
-    for (let i = 0; i < 24; i++) {
-      const s = document.createElement('span');
-      s.className = 'star';
-      s.textContent = '✦';
-      s.style.left = `${Math.random() * 100}%`;
-      s.style.top = `${Math.random() * 100}%`;
-      s.style.fontSize = `${Math.random() * 10 + 10}px`;
-      s.style.animationDelay = `${Math.random() * 2}s`;
-      stars.appendChild(s);
+  const stars = document.getElementById('prince-stars');
+  let spawnLoop;
+
+  function spawnStar() {
+    if (!stars) return;
+    const s = document.createElement('span');
+    s.className = 'gold-star';
+    const size = Math.random() * 4 + 2;
+    s.style.width = `${size}px`;
+    s.style.height = `${size}px`;
+    s.style.left = `${Math.random() * 100}%`;
+    s.style.top = `${Math.random() * 100 + 10}%`;
+    s.style.setProperty('--driftX', `${(Math.random() - 0.5) * 40}px`);
+    s.style.animationDuration = `${Math.random() * 8 + 10}s`;
+    s.style.animationDelay = `${Math.random() * 0.8}s`;
+    stars.appendChild(s);
+    setTimeout(() => s.remove(), 20000);
+  }
+
+  function openPrince() {
+    if (!overlay) return;
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    if (!spawnLoop) {
+      for (let i = 0; i < 30; i++) setTimeout(spawnStar, i * 90);
+      spawnLoop = setInterval(spawnStar, 260);
     }
   }
-  paw?.addEventListener('click', () => overlay?.classList.add('open'));
-  overlay?.addEventListener('click', () => overlay.classList.remove('open'));
+
+  function closePrince() {
+    if (!overlay) return;
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden', 'true');
+    if (spawnLoop) {
+      clearInterval(spawnLoop);
+      spawnLoop = null;
+    }
+  }
+
+  document.addEventListener('open-prince-tribute', openPrince);
+  document.getElementById('prince-paw')?.addEventListener('click', openPrince);
+  overlay?.addEventListener('click', closePrince);
 </script>
