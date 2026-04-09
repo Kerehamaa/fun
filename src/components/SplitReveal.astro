@@ -55,14 +55,19 @@
     const reveal = document.getElementById('split-reveal');
     const left = reveal?.querySelector('.left');
     const right = reveal?.querySelector('.right');
-    const sections = document.querySelectorAll('.play-section');
     if (!window.gsap || !reveal || !left || !right) return;
-
-    window.gsap.set(sections, { opacity: 1, y: 0, scale: 1 });
 
     const tl = window.gsap.timeline({ delay: 1.5 });
     tl.to(left, { xPercent: -105, duration: 1, ease: 'power3.inOut' })
       .to(right, { xPercent: 105, duration: 1, ease: 'power3.inOut' }, '<')
-      .to(reveal, { opacity: 0, duration: 0.6, onComplete: () => reveal.remove() });
+      .to(reveal, {
+        opacity: 0,
+        duration: 0.6,
+        onComplete: () => {
+          reveal.remove();
+          const first = document.querySelector('.play-section');
+          if (first) first.classList.add('is-visible');
+        },
+      });
   });
 </script>
